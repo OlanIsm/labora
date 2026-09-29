@@ -1,0 +1,13 @@
+import { strict as assert } from 'node:assert';
+import { experiments } from '../lib/data';
+import { act, answer, initialRuntime, score } from '../lib/engine';
+import { ohmsLaw, classifyPH, dilution, pendulumPeriod } from '../lib/science';
+const exp=experiments[0]; let s=initialRuntime();
+s=act(exp,s,'place','indicator'); assert.equal(s.step,0);
+s=act(exp,s,'place','beaker'); assert.equal(s.step,1);
+s=act(exp,s,'pour','solution'); assert.equal(s.step,1);
+s=act(exp,s,'place','solution'); s=act(exp,s,'pour','solution'); assert.equal(s.step,2);
+s=act(exp,s,'place','indicator'); s=act(exp,s,'add','indicator'); assert.equal(s.step,3);
+s=answer(exp,s,1); assert.equal(s.step,4); assert.equal(score(exp,s).total,100);
+assert.equal(ohmsLaw(6,3),2); assert.equal(classifyPH(3),'Acidic'); assert.equal(dilution(2,10,20),1); assert.ok(pendulumPeriod(2)>pendulumPeriod(1));
+console.log('Engine checks passed');

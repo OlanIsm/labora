@@ -1,0 +1,7 @@
+import { Runtime } from './engine';
+export type RecordEntry = { experimentId: string; completedAt: string; score: number; runtime: Runtime; userName?: string; className?: string };
+export type Assignment = { id: string; experimentId: string; title: string; instructions: string; className: string; stages: { instruction: string; hint: string; question: string; options: string[]; answer: number }[]; createdAt: string };
+export type User = { name: string; email: string; role: 'student' | 'teacher'; className?: string };
+const read = <T,>(key: string, fallback: T): T => { if (typeof window === 'undefined') return fallback; try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; } catch { return fallback; } };
+const write = (key: string, value: unknown) => localStorage.setItem(key, JSON.stringify(value));
+export const storage = { user: () => read<User | null>('labora-user',null), setUser: (x:User|null) => write('labora-user',x), records: () => read<RecordEntry[]>('labora-records',[]), saveRecord: (x:RecordEntry) => write('labora-records',[x,...read<RecordEntry[]>('labora-records',[]).filter(y=>y.experimentId!==x.experimentId)]), assignments: () => read<Assignment[]>('labora-assignments',[]), saveAssignment: (x:Assignment) => write('labora-assignments',[x,...read<Assignment[]>('labora-assignments',[])]), runtime: (id:string) => read<Runtime|null>(`labora-runtime-${id}`,null), saveRuntime: (id:string,x:Runtime) => write(`labora-runtime-${id}`,x), clearRuntime: (id:string) => localStorage.removeItem(`labora-runtime-${id}`) };
