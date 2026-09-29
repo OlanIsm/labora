@@ -1,29 +1,30 @@
 # Labora
 
-A browser-based virtual science laboratory with nine guided experiments, draggable tools, scientific visualizations, quizzes, progress, and teacher assignments.
+Labora is a virtual science laboratory with nine guided experiments, quizzes, progress tracking, and teacher assignments.
+
+## Project structure
+
+- `frontend/` — Next.js app, simulation engine, and `public/` for future images and other assets.
+- `backend/` — Supabase database schema and setup guidance. Supabase hosts authentication and shared data; no separate Node server is required.
 
 ## Run locally
 
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Use **Continue as student** or **Continue as teacher** on `/login` to explore without a backend. Demo data is saved in the browser.
+Open http://localhost:3000. The public landing page leads to login or signup. Use the student or teacher demo option on `/login` to enter the app without Supabase. Demo data remains in this browser.
 
 ## Shared school data
 
-1. Create a Supabase project and run [`supabase/schema.sql`](supabase/schema.sql) in its SQL editor.
-2. Copy `.env.example` to `.env.local` and enter the project URL and anon key.
-3. Restart the app. Sign up with a matching class or group name to share assignments and results.
-
-The local demo mode remains available without Supabase. Supabase authentication and row policies handle shared data when configured.
+Follow [`backend/README.md`](backend/README.md) to connect Supabase. Credentials go in `frontend/.env.local`.
 
 ## Checks
 
 ```bash
+cd frontend
 npm test
 npm run build
 ```
-
-Experiment definitions and questions live in `lib/data.ts`; action validation is in `lib/engine.ts`; scientific calculations are in `lib/science.ts`.

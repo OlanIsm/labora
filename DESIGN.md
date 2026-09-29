@@ -1,5 +1,5 @@
-# Labora design system
+# Labora implementation notes
 
-The interface draws from a contemporary lab bench: quiet white surfaces, pale neutral backgrounds, precise typography, and contained scientific diagrams. A dark teal anchors the brand. Cyan identifies chemistry, violet physics, and green biology.
+[`designSystem.md`](designSystem.md) is the visual source of truth. The current UI uses Fredoka headings, Nunito Sans text, a sky-blue brand color, candy-pink accents, and distinct chemistry blue, physics yellow, and biology green laboratory surfaces.
 
-Manrope carries headings and measurements; DM Sans carries controls and body copy. The laboratory workspace is the primary visual surface. Desktop keeps inventory beside the bench; mobile exposes it through a bottom drawer. Items use one icon style and a clear highlighted state for the next required action.
+The public landing page uses top navigation and explains the offering. The signed-in app uses an expandable sidebar. The laboratory selection page presents three large choices before a student reaches a subject's experiment list. Desktop experiments keep inventory beside the bench; mobile uses a bottom drawer.
