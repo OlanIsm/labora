@@ -5,11 +5,14 @@ export const initialRuntime = (): Runtime => ({ step:0, placed:[], done:[], answ
 export function act(exp: Experiment, state: Runtime, action: string, item: string): Runtime {
   const step = exp.steps[state.step];
   if (!step) return state;
-  if (action === 'place' && !state.placed.includes(item)) {
-    state = { ...state, placed:[...state.placed,item] };
+  if (exp.subject === 'chemistry') {
+    if (step.action !== action || step.item !== item) return { ...state, feedback:`Not yet. This step asks you to ${step.instruction.toLowerCase()}` };
+    const placed = state.placed.includes(item) ? state.placed : [...state.placed,item];
+    return { ...state, placed, step:state.step+1, done:[...state.done,state.step], feedback:action === 'place' ? `${exp.items.find(x=>x.id===item)?.name} placed. Well done.` : 'Good observation. The experiment has changed.' };
   }
+  if (action === 'place' && !state.placed.includes(item)) state = { ...state, placed:[...state.placed,item] };
   if (action !== 'place' && !state.placed.includes(item)) return { ...state, feedback:'Place that item on the bench first, then use it.' };
-  if (step.action === action && step.item === item) return { ...state, step:state.step+1, done:[...state.done,state.step], feedback: action === 'place' ? `${exp.items.find(x=>x.id===item)?.name} placed. Well done.` : action === 'activate' ? 'Observation complete. Look closely at the result.' : 'Good observation. The experiment has changed.', launched:state.launched || action === 'activate' && exp.visual === 'projectile', observed:state.observed || action === 'activate' && ['cell','blood'].includes(exp.visual) };
+  if (step.action === action && step.item === item) return { ...state, step:state.step+1, done:[...state.done,state.step], feedback:action === 'place' ? `${exp.items.find(x=>x.id===item)?.name} placed. Well done.` : action === 'activate' ? 'Observation complete. Look closely at the result.' : 'Good observation. The experiment has changed.', launched:state.launched || action === 'activate' && exp.visual === 'projectile', observed:state.observed || action === 'activate' && ['cell','blood'].includes(exp.visual) };
   if (action === 'place' && state.placed.includes(item)) return { ...state, feedback:`${exp.items.find(x=>x.id===item)?.name} is on the bench. Explore it, or use the highlighted item for this step.` };
   return { ...state, feedback:`That action is possible, but this step asks you to ${step.instruction.toLowerCase()}` };
 }
