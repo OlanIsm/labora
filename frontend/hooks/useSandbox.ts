@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useReducer, useRef, useState } from "react";
-import { historyReducer, initialLab } from "@/lib/sandbox/engine";
+import { initialLab } from "@/lib/sandbox/engine";
+import { workbenchHistoryReducer } from "@/lib/sandbox/rack";
 import { Discipline } from "@/lib/sandbox/types";
 import { loadBench, saveBench } from "@/services/labRepository";
 
 export function useSandbox(discipline: Discipline) {
-  const [history, dispatch] = useReducer(historyReducer, {
+  const [history, dispatch] = useReducer(workbenchHistoryReducer, {
     past: [],
     present: initialLab(discipline),
     future: [],

@@ -1,21 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Atom, Leaf, Wrench, Search } from "lucide-react";
+import { Atom, Leaf, Wrench, Search, X } from "lucide-react";
 import { catalog } from "@/lib/sandbox/catalog";
 import { Discipline, Material } from "@/lib/sandbox/types";
 import EquipmentDrawing, { hasEquipmentDrawing } from "./EquipmentDrawing";
 const starters: Record<Discipline, string[]> = {
   chemistry: [
     "beaker",
-    "test-tube",
-    "erlenmeyer",
     "water",
-    "hcl01",
-    "naoh01",
-    "universal",
-    "ph-meter",
+    "oil",
+    "nacl",
     "dropper",
+    "ph-meter",
   ],
   physics: [
     "pendulum",
@@ -99,6 +96,8 @@ export default function Inventory({
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("all");
   const [showAll, setShowAll] = useState(false);
+  const [rackTab, setRackTab] = useState("tools");
+  const scroller = useRef<HTMLDivElement>(null);
   const list = catalog
     .filter(
       (m) =>
@@ -123,21 +122,35 @@ export default function Inventory({
           ].includes(m.id)) &&
         (kind === "all" || m.kind === kind) &&
         (showAll ||
+          discipline === "chemistry" ||
           query.trim() ||
           kind !== "all" ||
           starters[discipline].includes(m.id)) &&
         m.name.toLowerCase().includes(query.toLowerCase()),
     )
     .sort((a, b) =>
-      showAll || query.trim() || kind !== "all"
+      discipline === "chemistry" || showAll || query.trim() || kind !== "all"
         ? 0
         : starters[discipline].indexOf(a.id) -
           starters[discipline].indexOf(b.id),
     );
+  const tools = list.filter((m) => m.kind !== "material");
+  const substances = list.filter((m) => m.kind === "material");
+  function chooseTab(value: string) {
+    setRackTab(value);
+    setQuery("");
+    scroller.current?.scrollTo({ left: 0 });
+  }
   return (
     <section id="sandbox-rack" className="sandbox-rack">
-      <h2>Rak alat & bahan</h2>
-      <p>Pilih gambarnya untuk meletakkan di meja.</p>
+      <h2>Alat & bahan</h2>
+      {discipline === "chemistry" && (
+        <div className="sandbox-panel-tabs" role="group" aria-label="Pilihan rak">
+          <button aria-pressed={rackTab === "tools"} onClick={() => chooseTab("tools")}>Alat <span className="sandbox-rack-count">{tools.length}</span></button>
+          <button aria-pressed={rackTab === "materials"} onClick={() => chooseTab("materials")}>Bahan <span className="sandbox-rack-count">{substances.length}</span></button>
+        </div>
+      )}
+      <p>{discipline === "chemistry" ? "Seret bahan ke gelas untuk menuang." : "Pilih gambarnya untuk meletakkan di meja."}</p>
       <label className="search-box">
         <Search size={18} />
         <input
@@ -146,8 +159,9 @@ export default function Inventory({
           placeholder="Cari alat atau bahan"
           aria-label="Cari alat atau bahan"
         />
+        {query && <button aria-label="Hapus pencarian" onClick={() => setQuery("")}><X size={18} aria-hidden="true" /></button>}
       </label>
-      <details
+      {discipline !== "chemistry" && <details
         className="sandbox-inventory-more"
         onToggle={(event) => {
           setShowAll(event.currentTarget.open);
@@ -165,13 +179,31 @@ export default function Inventory({
             <option value="instrument">Alat ukur</option>
           </select>
         </label>
-      </details>
-      <div className="sandbox-rack-list">
+      </details>}
+      {discipline === "chemistry" ? (
+        <div ref={scroller} className="sandbox-rack-groups" tabIndex={0} aria-label={`Daftar ${rackTab === "tools" ? "alat" : "bahan"}, gulir ke samping`}>
+          {[
+            { name: "Alat", items: tools },
+            { name: "Bahan", items: substances },
+          ].map((group) => (
+            <section key={group.name} aria-label={group.name} className="sandbox-rack-group"
+              hidden={(group.name === "Alat") !== (rackTab === "tools")}
+            >
+              <div className="sandbox-rack-list">
+                {group.items.map((m) => <Item key={m.id} material={m} onAdd={onAdd} />)}
+                {!group.items.length && <div className="sandbox-rack-empty"><p>Tidak ada {group.name.toLowerCase()} yang cocok.</p>
+                  {(group.name === "Alat" ? substances : tools).length > 0 && <button onClick={() => chooseTab(group.name === "Alat" ? "materials" : "tools")}>Lihat {group.name === "Alat" ? "bahan" : "alat"}</button>}
+                </div>}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : <div className="sandbox-rack-list">
         {list.map((m) => (
           <Item key={m.id} material={m} onAdd={onAdd} />
         ))}
         {!list.length && <p>Tidak ada yang cocok. Coba nama lain.</p>}
-      </div>
+      </div>}
     </section>
   );
 }

@@ -45,6 +45,7 @@ export type Entity = {
   measurements: Record<string, number>;
   applied: Record<string, number>;
   connections: string[];
+  rackPlacement?: { rack: string; slot: number };
 };
 export type EventType =
   | "reaction.started"

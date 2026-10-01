@@ -1,5 +1,8 @@
 import "./styles.css";
 import "./sandbox.css";
+import "../features/chemistry/chemistry.css";
+import "../features/physics/physics.css";
+import "./physics-sims.css";
 import './specimens.css';
 export const metadata = {
   title: "Labora | Laboratorium Sains Virtual",

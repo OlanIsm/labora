@@ -30,6 +30,13 @@ export const hasEquipmentDrawing = (material: Material) =>
     "slide",
     "potato",
     "seed",
+    "rack",
+    "stirrer",
+    "tripod",
+    "stopwatch",
+    "electrolysis",
+    "chromatography",
+    "balloon",
   ].includes(material.id);
 
 /** Scientific schematics: silhouettes distinguish apparatus; read quantities from the instrument panel. */
@@ -41,6 +48,8 @@ export default function EquipmentDrawing({
   sediment = false,
   gas = false,
   layered = false,
+  layerFraction = 0.25,
+  layerColor = "#ddb74e",
   hot = false,
   value,
 }: {
@@ -51,12 +60,84 @@ export default function EquipmentDrawing({
   sediment?: boolean;
   gas?: boolean;
   layered?: boolean;
+  layerFraction?: number;
+  layerColor?: string;
   hot?: boolean;
   value?: number;
 }) {
   const clip = useId();
   const id = material.id;
   const stroke = "#426b7d";
+  if (id === "stopwatch")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <path d="M34 8H46M40 8V20M58 22L64 16" stroke={stroke} strokeWidth="4" fill="none" />
+        <circle cx="40" cy="53" r="29" fill="#e7f4f8" stroke={stroke} strokeWidth="2.5" />
+        <circle cx="40" cy="53" r="23" fill="#fff" stroke={stroke} />
+        <path d="M40 33V53L53 61M40 73V76M20 53H17M60 53H63" stroke={stroke} strokeWidth="2" fill="none" />
+        <circle cx="40" cy="53" r="3" fill={stroke} />
+      </svg>
+    );
+  if (id === "balloon")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <ellipse cx="40" cy="34" rx="24" ry="29" fill="#e7a2bb" stroke={stroke} strokeWidth="2" />
+        <path d="M40 63L35 69H45ZM40 69Q29 77 40 83T37 93" fill="none" stroke={stroke} strokeWidth="2" />
+      </svg>
+    );
+  if (id === "chromatography")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <path d="M22 8H58V86H22Z" fill="#fffef2" stroke={stroke} strokeWidth="2" />
+        <path d="M25 73H55M25 25H55" stroke={stroke} strokeDasharray="3 3" />
+        <ellipse cx="40" cy="65" rx="9" ry="3" fill="#a44b67" />
+        <ellipse cx="40" cy="49" rx="8" ry="3" fill="#695b91" />
+        <ellipse cx="40" cy="34" rx="7" ry="3" fill="#35778a" />
+      </svg>
+    );
+  if (id === "electrolysis")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <rect x="27" y="5" width="26" height="15" rx="2" fill="#d2e5ec" stroke={stroke} strokeWidth="2" />
+        <path d="M32 12H38M35 9V15M43 12H49M27 12H22V41M53 12H58V41" fill="none" stroke={stroke} strokeWidth="2" />
+        <path d="M12 35V84H68V35" fill="#e7f4f8" stroke={stroke} strokeWidth="2.5" />
+        <path d="M15 55H65V81H15Z" fill="#bde8f4" />
+        <path d="M22 41V72M58 41V72" stroke={stroke} strokeWidth="4" />
+        {[29, 51].map((x) => <g key={x}><circle cx={x} cy="64" r="2" fill="#fff" stroke={stroke} /><circle cx={x} cy="51" r="2" fill="#fff" stroke={stroke} /></g>)}
+      </svg>
+    );
+  if (id === "electrolyte-tester")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <rect x="9" y="9" width="20" height="27" rx="3" fill="#d2e5ec" stroke={stroke} strokeWidth="2" />
+        <path d="M14 18H24M19 13V23M14 29H24M29 16H44M58 31H66V66M19 36V66" fill="none" stroke={stroke} strokeWidth="2" />
+        <circle cx="51" cy="21" r="10" fill="#fff9db" stroke={stroke} strokeWidth="2" />
+        <path d="M47 18L51 25 55 18M47 31H55" fill="none" stroke={stroke} strokeWidth="2" />
+        <path d="M19 66V84M66 66V84" stroke={stroke} strokeWidth="5" />
+      </svg>
+    );
+  if (id === "stirrer")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <path d="M22 82L52 10Q55 5 59 9L29 83Q25 88 22 82Z" fill="#e7f4f8" stroke={stroke} strokeWidth="2" />
+      </svg>
+    );
+  if (id === "tripod")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <path d="M13 23H67V35H13Z" fill="#d2e5ec" stroke={stroke} strokeWidth="2" />
+        <path d="M19 25V33M29 25V33M39 25V33M49 25V33M59 25V33M15 29H65" stroke={stroke} />
+        <path d="M20 35L10 85M60 35L70 85M40 35V85" stroke={stroke} strokeWidth="3" />
+      </svg>
+    );
+  if (id === "rack")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        {[19, 40, 61].map((x) => <path key={x} d={`M${x - 5} 12H${x + 5}V62a5 5 0 0 1 -10 0Z`} fill="#e7f4f8" stroke={stroke} strokeWidth="2" />)}
+        <path d="M9 39H71V47H9ZM9 77H71V85H9Z" fill="#d2e5ec" stroke={stroke} strokeWidth="2" />
+        <path d="M12 47V77M68 47V77" stroke={stroke} strokeWidth="3" />
+      </svg>
+    );
   if (id === "spring")
     return (
       <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
@@ -255,7 +336,7 @@ export default function EquipmentDrawing({
   if (vessel) {
     const outline = outlines[id] || outlines.beaker;
     return (
-      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+      <svg viewBox={id === "test-tube" ? "22 0 36 95" : "0 0 80 95"} aria-hidden="true" className="equipment-drawing">
         <defs>
           <clipPath id={clip}>
             <path d={outline} />
@@ -264,6 +345,8 @@ export default function EquipmentDrawing({
         <path d={outline} fill="#ffffff99" stroke={stroke} strokeWidth="2.5" />
         <g clipPath={`url(#${clip})`}>
           <rect
+            key={`${fill}-${color}`}
+            className="equipment-liquid"
             x="8"
             y={83 - Math.max(0, Math.min(1, fill)) * 65}
             width="64"
@@ -275,8 +358,8 @@ export default function EquipmentDrawing({
               x="8"
               y={83 - Math.max(0, Math.min(1, fill)) * 65}
               width="64"
-              height={Math.max(0, Math.min(1, fill)) * 16}
-              fill="#ddb74e"
+              height={Math.max(0, Math.min(1, fill)) * 65 * Math.max(0, Math.min(1, layerFraction))}
+              fill={layerColor}
             />
           )}
           {sediment && <path d="M8 79H72V86H8Z" fill="#a89065" />}
@@ -319,6 +402,14 @@ export default function EquipmentDrawing({
       </svg>
     );
   }
+  if (id === "litmus-red" || id === "litmus-blue")
+    return (
+      <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
+        <rect x="28" y="9" width="24" height="76" rx="1" fill="#fffef2" stroke={stroke} strokeWidth="2" />
+        <path d="M29 32H51V84H29Z" fill={color === "#bde8f4" ? (id === "litmus-red" ? "#b54458" : "#37699c") : color} />
+        <path d="M33 17H47M33 23H47" stroke={stroke} strokeWidth="1.5" />
+      </svg>
+    );
   if (material.kind === "material")
     return (
       <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">
@@ -447,7 +538,6 @@ export default function EquipmentDrawing({
       "voltmeter",
       "ammeter",
       "multimeter",
-      "electrolyte-tester",
     ].includes(id)
   )
     return (

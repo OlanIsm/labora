@@ -17,7 +17,11 @@ import {
   snell,
 } from "../lib/sandbox/measurements";
 import { isLabState } from "../services/labRepository";
-import { actionFeedback, observationFeedback } from "../lib/sandbox/feedback";
+import { pourDrop, dipLitmusDrop } from "../lib/sandbox/drop";
+import { litmusRed, litmusBlue, litmusExplanation } from "../lib/sandbox/litmus";
+import { fitOnBench } from "../lib/sandbox/placement";
+import { placeTubeInRack, releaseTubeFromRack, workbenchHistoryReducer, RACK_SLOTS } from "../lib/sandbox/rack";
+import { actionFeedback, observationFeedback, latestObservationSince } from "../lib/sandbox/feedback";
 import {
   developChromatogram,
   separate,
@@ -589,3 +593,165 @@ assert.match(
 console.log(
   "Action feedback checks passed: truthful transfers, no-effect recovery, linked readings, disconnect, paused time and overflow.",
 );
+
+const dropBench = add(initialLab(), "beaker");
+const restoredBench = {
+  ...dropBench.state,
+  events: [...dropBench.state.events, { id: 100, time: 5, type: "gas.formed" as const, entity: dropBench.id, message: "Kejadian dari sesi lama." }],
+};
+assert.equal(latestObservationSince(restoredBench, null), undefined);
+assert.equal(latestObservationSince(restoredBench, 100), undefined);
+const newlyObserved = { ...restoredBench, events: [...restoredBench.events, {
+  id: 101, time: 6, type: "indicator.changed" as const, entity: dropBench.id, message: "Kejadian baru.",
+}] };
+assert.equal(latestObservationSince(newlyObserved, 100)?.message, "Kejadian baru.");
+const farPlacement = fitOnBench(92, 90, 1400, 800, 90, 100);
+assert.equal(farPlacement.x, 92);
+assert.equal(farPlacement.y, 87.5);
+const farAdded = reduceLab(initialLab(), { type: "add", material: "beaker", ...farPlacement });
+assert.equal(farAdded.entities[0].x, farPlacement.x);
+assert.equal(farAdded.entities[0].y, farPlacement.y);
+const farMoved = reduceLab(farAdded, { type: "move", id: farAdded.entities[0].id, x: 92.3, y: 86.7 });
+assert.equal(farMoved.entities[0].x, 92.3);
+assert.equal(farMoved.entities[0].y, 86.7);
+assert.deepEqual(farMoved.entities[0].contents, farAdded.entities[0].contents);
+assert.deepEqual(fitOnBench(-10, -10, 390, 400, 90, 100), { x: 0, y: 0 });
+const edgePlacement = fitOnBench(100, 100, 390, 400, 90, 100);
+close(edgePlacement.x / 100 * 390 + 90, 390);
+close(edgePlacement.y / 100 * 400 + 100, 400);
+assert.deepEqual(fitOnBench(NaN, Infinity, 0, 0, 90, 100), { x: 0, y: 0 });
+const oilDrop = pourDrop(dropBench.state, dropBench.id, { material: "oil" })!;
+assert.ok(oilDrop);
+assert.equal(oilDrop.state.entities.length, 1);
+close(totalVolumeForDrop(oilDrop.state), 100);
+assert.equal(entity(oilDrop.state, dropBench.id).contents[0].material, "oil");
+assert.match(actionFeedback(oilDrop.action, oilDrop.before, oilDrop.state).title, /ditambahkan/);
+assert.equal(dropBench.state.entities[0].contents.length, 0);
+const oilAndWater = pourDrop(oilDrop.state, dropBench.id, { material: "water" })!;
+assert.equal(entity(oilAndWater.state, dropBench.id).status, "Dua lapisan");
+close(totalVolumeForDrop(oilAndWater.state), 200);
+const dropHistory = historyReducer({ past: [], present: dropBench.state, future: [] }, {
+  type: "load", state: oilAndWater.state,
+});
+assert.deepEqual(historyReducer(dropHistory, { type: "undo" }).present, dropBench.state);
+assert.deepEqual(historyReducer(historyReducer(dropHistory, { type: "undo" }), { type: "redo" }).present, oilAndWater.state);
+const oilOnBench = add(dropBench.state, "oil");
+const benchPour = pourDrop(oilOnBench.state, dropBench.id, { entity: oilOnBench.id })!;
+assert.equal(benchPour.state.entities.length, 1);
+close(totalVolumeForDrop(benchPour.state), 100);
+assert.equal(pourDrop(dropBench.state, dropBench.id, { material: "battery" }), null);
+assert.equal(pourDrop(dropBench.state, "missing", { material: "oil" }), null);
+assert.equal(pourDrop(oilOnBench.state, oilOnBench.id, { entity: dropBench.id }), null);
+assert.equal(pourDrop(dropBench.state, dropBench.id, { entity: dropBench.id }), null);
+const sealedDropBench = reduceLab(dropBench.state, { type: "toggle", id: dropBench.id, key: "sealed" });
+assert.equal(pourDrop(sealedDropBench, dropBench.id, { material: "oil" }), null);
+const acidDrop = pourDrop(dropBench.state, dropBench.id, { material: "hcl01" })!;
+const neutralDrop = pourDrop(acidDrop.state, dropBench.id, { material: "naoh01" })!;
+close(entity(neutralDrop.state, dropBench.id).measurements.pH, 7, 0.02);
+assert.ok(isLabState(neutralDrop.state));
+function totalVolumeForDrop(s: LabState) {
+  return entity(s, dropBench.id).contents.reduce((n, p) => n + p.volume, 0);
+}
+console.log("Direct drop checks passed: rack/bench pour, oil layers, neutralization, guards and atomic undo/redo.");
+const acidForPaper = mix(["hcl01"]);
+const acidBeforePaper = structuredClone(entity(acidForPaper.s, acidForPaper.id));
+const acidPaperTest = dipLitmusDrop(acidForPaper.s, acidForPaper.id, { material: "litmus-blue" })!;
+const benchBluePaper = add(acidForPaper.s, "litmus-blue");
+const automaticBenchDip = dipLitmusDrop(benchBluePaper.state, acidForPaper.id, { entity: benchBluePaper.id })!;
+assert.equal(entity(automaticBenchDip.state, benchBluePaper.id).color, litmusRed);
+assert.deepEqual(entity(automaticBenchDip.state, acidForPaper.id).contents, acidBeforePaper.contents);
+assert.equal(automaticBenchDip.state.entities.length, benchBluePaper.state.entities.length);
+assert.equal(entity(acidPaperTest.state, acidPaperTest.paperId).color, litmusRed);
+assert.equal(litmusExplanation(entity(acidPaperTest.state, acidPaperTest.paperId))?.summary, "Kertas berubah dari biru menjadi merah.");
+assert.equal(litmusExplanation(entity(reduceLab(acidPaperTest.state, { type: "tick", dt: 1 }), acidPaperTest.paperId))?.summary, "Kertas berubah dari biru menjadi merah.");
+assert.equal(entity(acidPaperTest.state, acidForPaper.id).color, acidBeforePaper.color);
+assert.deepEqual(entity(acidPaperTest.state, acidForPaper.id).contents, acidBeforePaper.contents);
+assert.deepEqual(entity(acidForPaper.s, acidForPaper.id), acidBeforePaper);
+const liftedPaper = reduceLab(acidPaperTest.state, { type: "connect", source: acidPaperTest.paperId, target: acidForPaper.id });
+assert.equal(entity(liftedPaper, acidPaperTest.paperId).color, litmusRed);
+assert.equal(entity(liftedPaper, acidPaperTest.paperId).connections.length, 0);
+assert.equal(litmusExplanation(entity(liftedPaper, acidPaperTest.paperId))?.summary, "Kertas berubah dari biru menjadi merah.");
+const draggedPaper = reduceLab(acidPaperTest.state, { type: "move", id: acidPaperTest.paperId, x: 40, y: 40 });
+assert.equal(entity(draggedPaper, acidPaperTest.paperId).connections.length, 0);
+assert.equal(entity(draggedPaper, acidPaperTest.paperId).color, litmusRed);
+assert.ok(!entity(draggedPaper, acidForPaper.id).connections.includes(acidPaperTest.paperId));
+const baseForPaper = mix(["naoh01"]);
+const basePaperTest = dipLitmusDrop(baseForPaper.s, baseForPaper.id, { material: "litmus-red" })!;
+assert.equal(entity(basePaperTest.state, basePaperTest.paperId).color, litmusBlue);
+assert.equal(entity(basePaperTest.state, baseForPaper.id).color, entity(baseForPaper.s, baseForPaper.id).color);
+const secondVessel = add(acidPaperTest.state, "beaker");
+const secondBase = pourDrop(secondVessel.state, secondVessel.id, { material: "naoh01" })!.state;
+const retestedPaper = dipLitmusDrop(secondBase, secondVessel.id, { entity: acidPaperTest.paperId })!;
+assert.equal(entity(retestedPaper.state, acidPaperTest.paperId).color, litmusBlue);
+assert.equal(litmusExplanation(entity(retestedPaper.state, acidPaperTest.paperId))?.summary, "Kertas berubah dari merah menjadi biru.");
+assert.deepEqual(entity(retestedPaper.state, acidPaperTest.paperId).connections, [secondVessel.id]);
+assert.ok(!entity(retestedPaper.state, acidForPaper.id).connections.includes(acidPaperTest.paperId));
+for (const paperId of ["litmus-red", "litmus-blue"]) {
+  const neutralForPaper = mix(["water"]);
+  const neutralPaperTest = dipLitmusDrop(neutralForPaper.s, neutralForPaper.id, { material: paperId })!;
+  assert.equal(entity(neutralPaperTest.state, neutralPaperTest.paperId).color, materials[paperId].color);
+}
+assert.equal(dipLitmusDrop(dropBench.state, dropBench.id, { material: "litmus-blue" }), null);
+assert.equal(dipLitmusDrop(reduceLab(acidForPaper.s, { type: "toggle", id: acidForPaper.id, key: "sealed" }), acidForPaper.id, { material: "litmus-blue" }), null);
+assert.equal(pourDrop(acidForPaper.s, acidForPaper.id, { material: "litmus-blue" }), null);
+assert.deepEqual(reduceLab(acidPaperTest.state, { type: "pour", source: acidPaperTest.paperId, target: acidForPaper.id, amount: 1 }), acidPaperTest.state);
+const paperHistory = historyReducer({ past: [], present: acidForPaper.s, future: [] }, { type: "load", state: acidPaperTest.state });
+assert.deepEqual(historyReducer(paperHistory, { type: "undo" }).present, acidForPaper.s);
+assert.deepEqual(historyReducer(historyReducer(paperHistory, { type: "undo" }), { type: "redo" }).present, acidPaperTest.state);
+assert.ok(isLabState(acidPaperTest.state));
+console.log("Litmus checks passed: paper-only color change, neutral retention, lifting, solution conservation, dip guards and undo/redo.");
+
+const rackBench = add(initialLab(), "rack");
+const looseTube = add(rackBench.state, "test-tube");
+const filledTube = pourDrop(looseTube.state, looseTube.id, { material: "oil" })!.state;
+const filledBefore = structuredClone(filledTube);
+const mounted = placeTubeInRack(filledTube, rackBench.id, 0, { entity: looseTube.id })!;
+assert.deepEqual(entity(mounted, looseTube.id).contents, entity(filledTube, looseTube.id).contents);
+assert.deepEqual(entity(mounted, looseTube.id).measurements, entity(filledTube, looseTube.id).measurements);
+assert.deepEqual(filledTube, filledBefore);
+assert.equal(placeTubeInRack(mounted, rackBench.id, 0, { material: "test-tube" }), null);
+assert.equal(placeTubeInRack(mounted, rackBench.id, -1, { material: "test-tube" }), null);
+assert.equal(placeTubeInRack(mounted, rackBench.id, RACK_SLOTS, { material: "test-tube" }), null);
+assert.equal(placeTubeInRack(mounted, "missing", 1, { entity: looseTube.id }), null);
+assert.equal(placeTubeInRack(mounted, looseTube.id, 1, { entity: looseTube.id }), null);
+assert.equal(placeTubeInRack(mounted, rackBench.id, 1, { entity: rackBench.id }), null);
+assert.equal(placeTubeInRack(mounted, rackBench.id, 1, { material: "water" }), null);
+let fullRack = mounted;
+for (let slot = 1; slot < RACK_SLOTS; slot++) fullRack = placeTubeInRack(fullRack, rackBench.id, slot, { material: "test-tube" })!;
+assert.equal(fullRack.entities.filter((e) => e.rackPlacement).length, RACK_SLOTS);
+const releasedTube = releaseTubeFromRack(fullRack, looseTube.id)!;
+assert.equal(entity(releasedTube, looseTube.id).rackPlacement, undefined);
+assert.deepEqual(entity(releasedTube, looseTube.id).contents, entity(mounted, looseTube.id).contents);
+const replacedTube = placeTubeInRack(releasedTube, rackBench.id, 0, { entity: looseTube.id })!;
+assert.deepEqual(entity(replacedTube, looseTube.id).rackPlacement, { rack: rackBench.id, slot: 0 });
+assert.equal(replacedTube.entities.length, fullRack.entities.length);
+const secondRack = add(replacedTube, "rack");
+const transferredTube = placeTubeInRack(secondRack.state, secondRack.id, 2, { entity: looseTube.id })!;
+assert.deepEqual(entity(transferredTube, looseTube.id).rackPlacement, { rack: secondRack.id, slot: 2 });
+assert.ok(placeTubeInRack(transferredTube, rackBench.id, 0, { material: "test-tube" }));
+let rackHistory = workbenchHistoryReducer({ past: [], present: filledTube, future: [] }, { type: "load", state: mounted });
+const rackUndo = workbenchHistoryReducer(rackHistory, { type: "undo" });
+assert.deepEqual(rackUndo.present, filledTube);
+assert.deepEqual(workbenchHistoryReducer(rackUndo, { type: "redo" }).present, mounted);
+rackHistory = workbenchHistoryReducer(rackHistory, { type: "move", id: rackBench.id, x: 28, y: 20 });
+assert.equal(entity(rackHistory.present, looseTube.id).x, entity(rackHistory.present, rackBench.id).x);
+assert.equal(entity(rackHistory.present, looseTube.id).y, entity(rackHistory.present, rackBench.id).y);
+const draggedOut = workbenchHistoryReducer(rackHistory, { type: "move", id: looseTube.id, x: 60, y: 40 });
+assert.equal(entity(draggedOut.present, looseTube.id).rackPlacement, undefined);
+assert.deepEqual(workbenchHistoryReducer(draggedOut, { type: "undo" }).present, rackHistory.present);
+const removedRack = workbenchHistoryReducer(rackHistory, { type: "remove", id: rackBench.id });
+assert.equal(entity(removedRack.present, looseTube.id).rackPlacement, undefined);
+assert.deepEqual(entity(removedRack.present, looseTube.id).contents, entity(mounted, looseTube.id).contents);
+const removedTube = workbenchHistoryReducer(rackHistory, { type: "remove", id: looseTube.id });
+assert.ok(placeTubeInRack(removedTube.present, rackBench.id, 0, { material: "test-tube" }));
+assert.ok(isLabState(JSON.parse(JSON.stringify(fullRack))));
+const brokenPlacement = structuredClone(fullRack);
+entity(brokenPlacement, looseTube.id).rackPlacement!.rack = "missing";
+assert.ok(!isLabState(brokenPlacement));
+const duplicatePlacement = structuredClone(fullRack);
+duplicatePlacement.entities.find((e) => e.rackPlacement?.slot === 1)!.rackPlacement!.slot = 0;
+assert.ok(!isLabState(duplicatePlacement));
+const malformedRackState = structuredClone(fullRack);
+(malformedRackState.entities as unknown[]).push(null);
+assert.ok(!isLabState(malformedRackState));
+console.log("Test tube rack checks passed: slots, preserved contents, removal/replacement, transfer, rack movement, undo/redo and persisted validation.");

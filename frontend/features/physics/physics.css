@@ -1,0 +1,36 @@
+.sandbox-pendulum {
+  display: block;
+  position: relative;
+  width: 3px;
+  height: 55px;
+  background: #806500;
+  transform-origin: top;
+  transition: transform 0.2s linear;
+}
+.sandbox-pendulum i {
+  position: absolute;
+  bottom: -6px;
+  left: -8px;
+  background: #e5c652;
+  border: 2px solid #806500;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+.sandbox-fluid {
+  position: relative;
+  display: block;
+  width: 58px;
+  height: 60px;
+  background: #b4def0;
+  border: 2px solid #59869a;
+  border-top: 0;
+}
+.sandbox-fluid i {
+  position: absolute;
+  left: 15px;
+  width: 25px;
+  height: 15px;
+  background: #9c8252;
+  transition: top 0.3s ease;
+}

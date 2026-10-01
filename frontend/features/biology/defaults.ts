@@ -1,0 +1,5 @@
+export const biologyDefaults = {
+  focus: 0, magnification: 40, light: 100, concentration: 0.1,
+  wind: 0, humidity: 50, ph: 7, water: 1, fish: 2, plants: 3,
+  feed: 1, seed: 42, genotype: 0,
+};

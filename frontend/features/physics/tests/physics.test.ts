@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import { physicsCatalog } from "../catalog";
+import { physicsRules } from "../rules";
+import { physicsFields } from "../controlFields";
+import { ohm, pendulum, snell } from "../measurements";
+import { initialLab, reduceLab } from "../../../lib/sandbox/engine";
+
+assert.ok(physicsCatalog.every((m) => m.discipline === "physics"));
+assert.ok(physicsRules.every((r) => r.discipline === "physics"));
+assert.ok(physicsFields.pendulum.some(([key]) => key === "length"));
+assert.equal(ohm(6, 100), 0.06);
+assert.equal(snell(1.5, 1, 80), null);
+let state = reduceLab(initialLab("physics"), { type: "add", material: "pendulum" });
+const id = state.entities[0].id;
+state = reduceLab(state, { type: "set", id, key: "length", value: 2 });
+state = reduceLab(state, { type: "operate", id, operation: "launch" });
+state = reduceLab(state, { type: "tick", dt: 1 });
+assert.equal(state.entities[0].measurements["Periode (s)"], pendulum(2, state.entities[0].params.amplitude));
+assert.ok(state.entities[0].params.time > 0);
+console.log("Physics module checks passed.");

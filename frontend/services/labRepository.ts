@@ -1,6 +1,7 @@
 import { LabState } from "@/lib/sandbox/types";
 import { initialLab } from "@/lib/sandbox/engine";
 import { materials } from "@/lib/sandbox/catalog";
+import { RACK_SLOTS } from "@/lib/sandbox/rack";
 
 // TODO-BACKEND: synchronize versioned bench configurations and notebooks per authenticated account.
 // TODO-BACKEND: synchronize optional introduction preferences per account.
@@ -42,6 +43,7 @@ export function isLabState(value: unknown): value is LabState {
   )
     return false;
   const ids = new Set<string>();
+  const rackSlots = new Set<string>();
   for (const e of s.entities) {
     if (
       !e ||
@@ -84,6 +86,15 @@ export function isLabState(value: unknown): value is LabState {
     )
       return false;
     ids.add(e.id);
+    if (e.rackPlacement !== undefined) {
+      const placement = e.rackPlacement;
+      if (!placement || e.material !== "test-tube" || typeof placement.rack !== "string" ||
+        !Number.isInteger(placement.slot) || placement.slot < 0 || placement.slot >= RACK_SLOTS ||
+        !s.entities.some((rack) => rack?.id === placement.rack && rack.material === "rack")) return false;
+      const slotKey = `${placement.rack}:${placement.slot}`;
+      if (rackSlots.has(slotKey)) return false;
+      rackSlots.add(slotKey);
+    }
   }
   return (
     s.entities.every((e) => e.connections.every((id) => ids.has(id))) &&

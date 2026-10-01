@@ -3,7 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
+  pointerWithin,
+  rectIntersection,
   DragEndEvent,
+  DragOverlay,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -18,6 +21,7 @@ import {
   RotateCcw,
   Undo2,
   Redo2,
+  X,
 } from "lucide-react";
 import { useSandbox } from "@/hooks/useSandbox";
 import { Discipline, LabState } from "@/lib/sandbox/types";
@@ -26,10 +30,18 @@ import {
   actionFeedback,
   Feedback,
   observationFeedback,
-  measurementFeedback,
+  selectionFeedback,
+  latestObservationSince,
+  failedDropFeedback,
 } from "@/lib/sandbox/feedback";
 import { loadBench, saveBench, download } from "@/services/labRepository";
 import { ruleCounts } from "@/lib/sandbox/rules";
+import { pourDrop, dipLitmusDrop } from "@/lib/sandbox/drop";
+import { isLitmus } from "@/lib/sandbox/litmus";
+import { placeTubeInRack, releaseTubeFromRack } from "@/lib/sandbox/rack";
+import { fitOnBench } from "@/lib/sandbox/placement";
+import { materials } from "@/lib/sandbox/catalog";
+import DragPreview from "./DragPreview";
 import Workbench from "./Workbench";
 import Inventory from "./Inventory";
 import ApparatusControls from "./ApparatusControls";
@@ -38,6 +50,7 @@ import Notebook from "./Notebook";
 import CoachMarks, { useIntroduction } from "./CoachMarks";
 import LabErrorBoundary from "./LabErrorBoundary";
 import ActionFeedback from "./ActionFeedback";
+import EquipmentExplanation from "./EquipmentExplanation";
 
 const names = {
   chemistry: "Kimia",
@@ -52,6 +65,8 @@ function Desk({ discipline }: { discipline: Discipline }) {
     [target, setTarget] = useState(""),
     [tab, setTab] = useState("rack");
   const [panelOpen, setPanelOpen] = useState(false);
+  const [draggedMaterial, setDraggedMaterial] = useState("");
+  const [draggedEntity, setDraggedEntity] = useState("");
   const [actions, setActions] = useState<string[]>([]),
     [message, setMessage] = useState(""),
     [help, setHelp] = useState(false);
@@ -61,7 +76,12 @@ function Desk({ discipline }: { discipline: Discipline }) {
     null,
   );
   const lastEvent = useRef<number | null>(null);
+  const results = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
+    if (!ready) {
+      lastEvent.current = null;
+      return;
+    }
     const latest = state.events.at(-1)?.id || 0;
     if (pending.current) {
       setFeedback(
@@ -73,28 +93,15 @@ function Desk({ discipline }: { discipline: Discipline }) {
         ),
       );
       pending.current = null;
-    } else if (lastEvent.current !== null) {
-      const observed = state.events
-        .filter(
-          (event) =>
-            event.id > lastEvent.current! &&
-            [
-              "gas.formed",
-              "precipitate.formed",
-              "indicator.changed",
-              "container.overflow",
-              "fuse.blown",
-              "lamp.broken",
-            ].includes(event.type),
-        )
-        .at(-1);
+    } else {
+      const observed = latestObservationSince(state, lastEvent.current);
       if (observed) {
         setMessage("");
         setFeedback(observationFeedback(observed, state));
       }
     }
     lastEvent.current = latest;
-  }, [history, speed]);
+  }, [history, speed, ready]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, {
@@ -104,12 +111,27 @@ function Desk({ discipline }: { discipline: Discipline }) {
   const mark = (type: string) =>
     setActions((old) => (old.includes(type) ? old : [...old, type]));
   const entity = state.entities.find((e) => e.id === selected);
+  const simpleChemistry = discipline === "chemistry";
   function startIntroduction() {
     setPanelOpen(true);
     setTab("rack");
     intro.start();
   }
   function send(a: HistoryAction) {
+    if (a.type === "move" || a.type === "add") {
+      const bench = document.getElementById("sandbox-bench")?.getBoundingClientRect();
+      const id = a.type === "move" ? a.id : undefined;
+      const item = id ? state.entities.find((e) => e.id === id) : undefined;
+      const material = a.type === "add" ? a.material : item?.material;
+      const rect = item && !item.rackPlacement ? document.getElementById(`sandbox-entity-${item.id}`)?.getBoundingClientRect() : undefined;
+      const mobile = window.matchMedia("(max-width: 760px)").matches;
+      if (bench && a.x !== undefined && a.y !== undefined) {
+        const fitted = fitOnBench(a.x, a.y, bench.width, bench.height,
+          rect?.width ?? (material === "rack" ? 216 : mobile ? 70 : 90),
+          rect?.height ?? (material === "rack" ? 184 : mobile ? 128 : 140));
+        a = { ...a, ...fitted };
+      }
+    }
     pending.current = { action: a, before: state };
     setMessage("");
     dispatch(a);
@@ -145,7 +167,10 @@ function Desk({ discipline }: { discipline: Discipline }) {
       setTab("rack");
       setPanelOpen(true);
     }
-    if (next === "observe" && id) setSelected(id);
+    if (next === "observe") {
+      if (id) setSelected(id);
+      if (results.current) results.current.open = true;
+    }
     requestAnimationFrame(() =>
       document
         .getElementById(
@@ -158,10 +183,56 @@ function Desk({ discipline }: { discipline: Discipline }) {
     const id = `e${state.nextId}`;
     send({ type: "add", material, x, y });
     setSelected(id);
-    setTab("controls");
+    setTab("rack");
   }
   function drop(e: DragEndEvent) {
-    if (e.over?.id !== "bench") return;
+    setDraggedMaterial("");
+    setDraggedEntity("");
+    const rack = e.over?.data.current?.rack;
+    const slot = e.over?.data.current?.slot;
+    if (typeof rack === "string" && typeof slot === "number") {
+      const source = e.active.data.current;
+      if (source?.material) placeTube(rack, slot, { material: String(source.material) });
+      else if (source?.entity) placeTube(rack, slot, { entity: String(source.entity) });
+      return;
+    }
+    const destination = e.over?.data.current?.container;
+    const source = e.active.data.current;
+    if (typeof destination === "string" && source) {
+      const material = source.material || state.entities.find((e) => e.id === source.entity)?.material;
+      if (isLitmus(String(material))) {
+        const tested = dipLitmusDrop(state, destination, source.material ? { material: String(source.material) } : { entity: String(source.entity) });
+        if (tested) {
+          pending.current = null;
+          dispatch({ type: "load", state: tested.state });
+          setSelected(tested.paperId);
+          setTarget("");
+          setMessage("");
+          setFeedback(actionFeedback({ type: "connect", source: tested.paperId, target: destination }, state, tested.state));
+        } else { setMessage(""); setFeedback(failedDropFeedback("litmus")); }
+        return;
+      }
+      const poured = source.material
+        ? pourDrop(state, destination, { material: String(source.material) })
+        : source.entity
+          ? pourDrop(state, destination, { entity: String(source.entity) })
+          : null;
+      if (poured) {
+        pending.current = null;
+        dispatch({ type: "load", state: poured.state });
+        setFeedback(actionFeedback(poured.action, poured.before, poured.state, speed > 0));
+        setMessage("");
+        setSelected(destination);
+        setTarget("");
+        mark("pour");
+      } else { setMessage(""); setFeedback(failedDropFeedback("pour")); }
+      return;
+    }
+    if (e.over?.id !== "bench") {
+      setMessage("");
+      setFeedback(failedDropFeedback("outside"));
+      return;
+    }
     const bench = document
       .getElementById("sandbox-bench")!
       .getBoundingClientRect();
@@ -177,14 +248,34 @@ function Desk({ discipline }: { discipline: Discipline }) {
       const item = state.entities.find(
         (x) => x.id === e.active.data.current?.entity,
       );
-      if (item)
+      if (item) {
+        const rect = e.active.rect.current.translated;
         send({
           type: "move",
           id: item.id,
-          x: item.x + (e.delta.x / bench.width) * 100,
-          y: item.y + (e.delta.y / bench.height) * 100,
+          x: rect ? ((rect.left - bench.left) / bench.width) * 100 : item.x + (e.delta.x / bench.width) * 100,
+          y: rect ? ((rect.top - bench.top) / bench.height) * 100 : item.y + (e.delta.y / bench.height) * 100,
         });
+      }
     }
+  }
+  function placeTube(rack: string, slot: number, source: { entity: string } | { material: string }) {
+    const next = placeTubeInRack(state, rack, slot, source);
+    if (!next) { setMessage(""); setFeedback(failedDropFeedback("rack")); return; }
+    pending.current = null;
+    dispatch({ type: "load", state: next });
+    const tube = next.entities.find((e) => e.rackPlacement?.rack === rack && e.rackPlacement.slot === slot)!;
+    setSelected(tube.id);
+    setMessage("");
+    setFeedback({ title: `Tabung diletakkan di slot ${slot + 1}.`, detail: "Isi tabung tetap sama. Tabung akan ikut saat rak dipindahkan.", hint: "Seret tabung ke meja untuk mengambilnya, atau gunakan Keluarkan dari rak." });
+  }
+  function releaseTube() {
+    const next = releaseTubeFromRack(state, selected);
+    if (!next) return;
+    pending.current = null;
+    dispatch({ type: "load", state: next });
+    setMessage("");
+    setFeedback({ title: "Tabung dikeluarkan dari rak.", detail: "Tabung ada di meja, dengan isi yang sama. Slotnya kosong kembali.", hint: "Seret tabung ke slot kosong untuk meletakkannya lagi." });
   }
   function exportImage() {
     const escape = (v: string) =>
@@ -201,24 +292,69 @@ function Desk({ discipline }: { discipline: Discipline }) {
       );
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600"><rect width="100%" height="100%" fill="#eaf9ff"/><text x="20" y="30" font-family="sans-serif">Labora · ${names[discipline]} · ${state.time.toFixed(1)} s</text>${state.entities.map((e) => `<g transform="translate(${e.x * 10},${e.y * 5 + 40})"><rect width="100" height="55" rx="12" fill="${escape(e.color)}" stroke="#155c7b"/><text y="75" font-size="12" font-family="sans-serif">${escape(e.label)}</text></g>`).join("")}</svg>`;
     download("meja-labora.svg", svg, "image/svg+xml");
+    setMessage("Ekspor gambar SVG dimulai. Periksa unduhan browser.");
   }
   if (!ready) return <p role="status">Menyiapkan meja bebas...</p>;
+  const controls = <>
+    {entity?.material === "rack" && <p className="sandbox-small">Seret tabung ke slot kosong. Atau pilih tabung di meja lalu klik slot. Tanpa tabung di meja yang dipilih, klik slot membuat tabung baru.</p>}
+    {entity?.rackPlacement && <button onClick={releaseTube}>Keluarkan dari rak</button>}
+    <ApparatusControls entity={entity} state={state} dispatch={send} target={target}
+      setTarget={(id) => {
+        setTarget(id);
+        setMessage("");
+        const destination = state.entities.find((e) => e.id === id);
+        if (destination && isLitmus(entity?.material || "")) {
+          setFeedback({ title: `${destination.label} dipilih untuk diuji.`, detail: "Kertas belum dicelupkan. Memilih wadah tidak mengubah warna atau isi larutan.", hint: "Tekan Celupkan kertas untuk menguji larutan.", target: entity?.id });
+          return;
+        }
+        if (destination) setFeedback({
+          title: `${destination.label} dipilih sebagai tujuan.`,
+          detail: entity && entity.contents.some((p) => p.mass > 0)
+            ? "Bahan belum dituang. Memilih tujuan saja belum memindahkan isi benda."
+            : "Benda belum tersambung. Memilih tujuan saja belum menghubungkan alat.",
+          hint: entity && entity.contents.some((p) => p.mass > 0)
+            ? "Tekan “Tuang / campur” untuk memindahkan jumlah yang dipilih."
+            : "Tekan “Sambungkan” untuk menghubungkan kedua benda.",
+          target: destination.id,
+        });
+      }} onAction={mark} />
+  </>;
   return (
-    <DndContext sensors={sensors} onDragEnd={drop}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={(args) => {
+        const hits = args.pointerCoordinates ? pointerWithin(args) : rectIntersection(args);
+        const rackSlots = hits.filter((hit) => String(hit.id).startsWith("rack-slot:"));
+        if (rackSlots.length) return rackSlots;
+        const containers = hits.filter((hit) => hit.id !== "bench");
+        return containers.length ? containers : hits;
+      }}
+      onDragEnd={drop}
+      onDragStart={(e) => {
+        setDraggedEntity(String(e.active.data.current?.entity || ""));
+        setDraggedMaterial(String(e.active.data.current?.material || state.entities.find((item) => item.id === e.active.data.current?.entity)?.material || ""));
+      }}
+      onDragCancel={() => {
+        setDraggedMaterial("");
+        setDraggedEntity("");
+        setMessage("Drag dibatalkan. Meja tidak diubah.");
+      }}
+    >
       <div className={`sandbox ${discipline}`}>
         <header className="sandbox-heading">
           <div>
             <h1>Lab {names[discipline]}</h1>
-            <p>Eksperimen bebas · SMA/MA kelas X–XII</p>
+            {!simpleChemistry && <p>Eksperimen bebas · SMA/MA kelas X–XII</p>}
           </div>
           <div className="sandbox-action-row">
-            <button onClick={startIntroduction}>
+            {simpleChemistry && <Link href="/laboratories">Keluar lab</Link>}
+            {!simpleChemistry && <button onClick={startIntroduction}>
               <CircleHelp size={17} />
               Cara Pakai
-            </button>
+            </button>}
           </div>
         </header>
-        <nav className="sandbox-rooms" aria-label="Pilihan ruang">
+        {!simpleChemistry && <nav className="sandbox-rooms" aria-label="Pilihan ruang">
           {(Object.keys(names) as Discipline[]).map((id) => (
             <Link
               key={id}
@@ -229,10 +365,11 @@ function Desk({ discipline }: { discipline: Discipline }) {
               {names[id]}
             </Link>
           ))}
-        </nav>
+        </nav>}
         <div id="sandbox-toolbar" className="sandbox-toolbar">
           <button
-            aria-label="Undo"
+            aria-label="Batalkan tindakan"
+            title="Batalkan tindakan"
             disabled={!history.past.length}
             onClick={() => {
               setSpeed(0);
@@ -244,7 +381,8 @@ function Desk({ discipline }: { discipline: Discipline }) {
             <span>Batalkan</span>
           </button>
           <button
-            aria-label="Redo"
+            aria-label="Ulangi tindakan"
+            title="Ulangi tindakan"
             disabled={!history.future.length}
             onClick={() => {
               setSpeed(0);
@@ -254,7 +392,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
             <Redo2 size={18} />
             <span>Ulangi</span>
           </button>
-          <span className="sandbox-clock">{state.time.toFixed(1)} s</span>
+          {!simpleChemistry && <span className="sandbox-clock">{state.time.toFixed(1)} s</span>}
           <button
             className="sandbox-play"
             aria-label={speed ? "Jeda simulasi" : "Jalankan simulasi"}
@@ -266,6 +404,16 @@ function Desk({ discipline }: { discipline: Discipline }) {
           <details className="sandbox-menu">
             <summary>Pilihan meja</summary>
             <div className="sandbox-menu-content">
+              {simpleChemistry && <>
+                <button onClick={startIntroduction}><CircleHelp size={17} />Cara pakai</button>
+                <details className="sandbox-room-switcher">
+                  <summary>Ganti lab</summary>
+                  <nav aria-label="Pilihan ruang">
+                    {(Object.keys(names) as Discipline[]).map((id) => <Link key={id} href={`/sandbox/${id}`} aria-current={discipline === id ? "page" : undefined}>{names[id]}</Link>)}
+                  </nav>
+                </details>
+              </>}
+              {simpleChemistry && <span className="sandbox-clock">Waktu simulasi: {state.time.toFixed(1)} s</span>}
               <label className="sandbox-speed">
                 Waktu
                 <select
@@ -334,12 +482,31 @@ function Desk({ discipline }: { discipline: Discipline }) {
             sebelum menutup halaman.
           </p>
         )}
-        <ActionFeedback
+        <div className={simpleChemistry ? `sandbox-inspector ${entity ? "has-selection" : ""}` : undefined}>
+        {simpleChemistry && entity && <div className="sandbox-inspector-heading">
+          <h2>{entity.label}</h2>
+          <button className="sandbox-inspector-close" aria-label="Tutup info alat" onClick={() => {
+          setSelected("");
+          setFeedback(null);
+          setMessage("");
+        }}><X size={20} aria-hidden="true" /></button>
+        </div>}
+         <ActionFeedback
           feedback={feedback}
           message={message}
           onNext={feedbackNext}
-        />
-        {intro.offer && (
+          compact={simpleChemistry}
+          onDismiss={() => { setFeedback(null); setMessage(""); }}
+         />
+         {simpleChemistry && <EquipmentExplanation entity={entity} compact />}
+        {simpleChemistry && entity && <>
+          <button aria-expanded={tab === "controls"} onClick={() => setTab(tab === "controls" ? "rack" : "controls")}>
+            {tab === "controls" ? "Tutup tindakan" : "Tindakan alat"}
+          </button>
+          {tab === "controls" && controls}
+        </>}
+        </div>
+        {intro.offer && !simpleChemistry && (
           <aside className="sandbox-intro-offer">
             <span>Baru pertama mencoba? Mau lihat cara pakai?</span>
             <button onClick={startIntroduction}>Mulai</button>
@@ -395,47 +562,40 @@ function Desk({ discipline }: { discipline: Discipline }) {
               state={state}
               selected={selected}
               dispatch={send}
+              onPlaceTube={placeTube}
               onSelect={(id) => {
                 setSelected(id);
-                setTab("controls");
+                setTab(simpleChemistry ? "rack" : "controls");
                 setPanelOpen(true);
                 setMessage("");
                 const item = state.entities.find((e) => e.id === id);
                 if (item)
-                  setFeedback({
-                    title: `${item.label} dipilih.`,
-                    detail:
-                      measurementFeedback(item) ||
-                      item.status ||
-                      "Benda belum diubah. Tindakan yang tersedia ada di panel benda.",
-                    hint: "Kamu bisa memilih tindakan atau mengambil benda lain.",
-                    target: id,
-                  });
+                  setFeedback(selectionFeedback(item));
               }}
             />
             <p className="sandbox-safety">
-              K3 virtual: jangan mencoba kombinasi berbahaya di dunia nyata.
-              Tumpahan, panas, dan kerusakan di sini hanya simulasi.
+              {simpleChemistry ? "Simulasi saja. Jangan mencoba campuran berbahaya di dunia nyata." : "K3 virtual: jangan mencoba kombinasi berbahaya di dunia nyata. Tumpahan, panas, dan kerusakan di sini hanya simulasi."}
             </p>
-            <Observations entity={entity} state={state} />
-            <Notebook
+            {!simpleChemistry && <Observations entity={entity} state={state} />}
+            {!simpleChemistry && <Notebook
               state={state}
               entity={entity}
               dispatch={send}
               onNote={() => mark("note")}
-            />
+              onFeedback={setMessage}
+            />}
           </div>
-          <aside className={`sandbox-right ${panelOpen ? "panel-open" : ""}`}>
-            <button
+          <aside className={`sandbox-right ${panelOpen || simpleChemistry ? "panel-open" : ""}`}>
+            {!simpleChemistry && <button
               className="sandbox-panel-disclosure"
               aria-expanded={panelOpen}
               aria-controls="sandbox-panel-body"
               onClick={() => setPanelOpen(!panelOpen)}
             >
               Rak & pengaturan {panelOpen ? "· tutup" : "· buka"}
-            </button>
+            </button>}
             <div id="sandbox-panel-body" className="sandbox-panel-body">
-              <div
+              {!simpleChemistry && <div
                 className="sandbox-panel-tabs"
                 role="group"
                 aria-label="Panel meja"
@@ -444,48 +604,36 @@ function Desk({ discipline }: { discipline: Discipline }) {
                   aria-pressed={tab === "rack"}
                   onClick={() => setTab("rack")}
                 >
-                  Rak
+                  {simpleChemistry ? "Alat & bahan" : "Rak"}
                 </button>
                 <button
                   aria-pressed={tab === "controls"}
+                  disabled={simpleChemistry && !entity}
                   onClick={() => setTab("controls")}
                 >
-                  Benda dipilih
+                  {simpleChemistry ? "Atur benda" : "Benda dipilih"}
                 </button>
-              </div>
-              {tab === "rack" ? (
+              </div>}
+              {(tab === "rack" || simpleChemistry) && (
                 <Inventory discipline={discipline} onAdd={(id) => add(id)} />
-              ) : (
-                <ApparatusControls
-                  entity={entity}
-                  state={state}
-                  dispatch={send}
-                  target={target}
-                  setTarget={(id) => {
-                    setTarget(id);
-                    setMessage("");
-                    const destination = state.entities.find((e) => e.id === id);
-                    if (destination)
-                      setFeedback({
-                        title: `${destination.label} dipilih sebagai tujuan.`,
-                        detail:
-                          entity && entity.contents.some((p) => p.mass > 0)
-                            ? "Bahan belum dituang. Memilih tujuan saja belum memindahkan isi benda."
-                            : "Benda belum tersambung. Memilih tujuan saja belum menghubungkan alat.",
-                        hint:
-                          entity && entity.contents.some((p) => p.mass > 0)
-                            ? "Tekan “Tuang / campur” untuk memindahkan jumlah yang dipilih."
-                            : "Tekan “Sambungkan” untuk menghubungkan kedua benda.",
-                        target: destination.id,
-                      });
-                  }}
-                  onAction={mark}
-                />
               )}
+              {!simpleChemistry && tab === "controls" && controls}
             </div>
           </aside>
+          {simpleChemistry && (
+            <div className="sandbox-records">
+              <details ref={results} className="sandbox-results">
+                <summary>Hasil pengamatan</summary>
+                <Observations entity={entity} state={state} compact />
+              </details>
+              <Notebook state={state} entity={entity} dispatch={send} onNote={() => mark("note")} onFeedback={setMessage} />
+            </div>
+          )}
         </div>
       </div>
+      <DragOverlay dropAnimation={null}>
+        <DragPreview material={materials[draggedMaterial]} entity={state.entities.find((item) => item.id === draggedEntity)} state={state} />
+      </DragOverlay>
     </DndContext>
   );
 }

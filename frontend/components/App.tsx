@@ -59,6 +59,7 @@ import {
 } from "@/lib/science";
 import { supabase } from "@/lib/supabase";
 import { loadCloud, saveCloudAssignment, saveCloudResult } from "@/lib/cloud";
+import { physicsSimulations, PhysicsSimulationList } from "./physics-sims/Simulations";
 const Sandbox = dynamic(() => import("./sandbox/Sandbox"), {
   ssr: false,
   loading: () => <p role="status">Memuat meja eksperimen...</p>,
@@ -172,9 +173,10 @@ function Shell({
   const active = (href: string) =>
     pathname === href ||
     (href === "/laboratories" &&
-      ["/laboratories/", "/experiments/", "/lab/", "/results/"].some((prefix) =>
-        pathname.startsWith(prefix),
-      )) ||
+      (pathname === "/fisika" || pathname.startsWith("/fisika/") ||
+        ["/laboratories/", "/experiments/", "/lab/", "/results/"].some((prefix) =>
+          pathname.startsWith(prefix),
+        ))) ||
     (href === "/teacher" && pathname.startsWith("/teacher/"));
   if (marketing)
     return (
@@ -218,7 +220,7 @@ function Shell({
       </div>
     );
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${pathname === "/sandbox/chemistry" || pathname === "/laboratories/chemistry" ? "canvas-shell" : ""}`}>
       <a className="skip-link" href="#main">
         Langsung ke isi
       </a>
@@ -386,13 +388,13 @@ function LabChoices() {
       {subjects.map((s) => (
         <Link
           key={s.id}
-          href={`/sandbox/${s.id}`}
+          href={s.id === "physics" ? "/fisika" : `/sandbox/${s.id}`}
           className={`lab-choice ${s.id}`}
         >
           <div className="lab-choice-head">
             <s.icon size={40} strokeWidth={1.7} />
             <span>
-              {experiments.filter((e) => e.subject === s.id).length} eksperimen
+              {s.id === "physics" ? `${physicsSimulations.length} simulasi` : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
             </span>
           </div>
           <h3>{s.name}</h3>
@@ -717,6 +719,13 @@ function LaboratorySelection() {
         <p>Nggak perlu alat sungguhan. Semua eksperimen dilakukan di layar.</p>
       </div>
       <LabChoices />
+      <section className="home-section">
+        <h2>Simulasi fisika</h2>
+        <p>Coba gerak, gaya apung, rangkaian listrik, optik, dan energi.</p>
+        <Link href="/fisika" className="button primary">
+          Pilih simulasi fisika
+        </Link>
+      </section>
       <section className="home-section">
         <div className="section-heading">
           <div>
@@ -2721,9 +2730,10 @@ export default function App() {
     pathname.startsWith("/sandbox/") ||
     (pathname.startsWith("/laboratories/") &&
       subjects.some((s) => pathname.endsWith(s.id)));
+  const physicsSimulation = physicsSimulations.find((sim) => pathname === `/fisika/${sim.id}`);
   const isPublic =
     ["/", "/login", "/register", "/laboratories"].includes(pathname) ||
-    isSandbox;
+    isSandbox || pathname === "/fisika" || !!physicsSimulation;
   useEffect(() => {
     if (ready && !user && !isPublic) router.replace("/login");
   }, [ready, user, isPublic, router]);
@@ -2749,6 +2759,11 @@ export default function App() {
     content = (
       <Sandbox key={segments[1]} discipline={segments[1] as Discipline} />
     );
+  else if (pathname === "/fisika") content = <PhysicsSimulationList />;
+  else if (physicsSimulation) {
+    const Simulation = physicsSimulation.component;
+    content = <Simulation key={physicsSimulation.id} />;
+  }
   else if (pathname === "/challenges")
     content = (
       <>
@@ -2845,7 +2860,7 @@ export default function App() {
     <Shell
       user={user}
       onLogout={logout}
-      wide={segments[0] === "lab" || isSandbox}
+      wide={segments[0] === "lab" || isSandbox || !!physicsSimulation}
     >
       {syncError && (
         <div className="sync-error" role="alert">

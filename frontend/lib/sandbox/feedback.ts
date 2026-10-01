@@ -1,6 +1,7 @@
 import { materials } from "./catalog";
 import type { HistoryAction } from "./engine";
 import { Entity, LabEvent, LabState } from "./types";
+import { isLitmus, litmusExplanation } from "./litmus";
 
 export type Feedback = {
   title: string;
@@ -11,6 +12,13 @@ export type Feedback = {
 };
 const number = (value: number) =>
   value.toLocaleString("id-ID", { maximumFractionDigits: 2 });
+export function latestObservationSince(state: LabState, afterId: number | null): LabEvent | undefined {
+  if (afterId === null) return undefined;
+  return state.events.filter((event) => event.id > afterId && [
+    "gas.formed", "precipitate.formed", "indicator.changed",
+    "container.overflow", "fuse.blown", "lamp.broken",
+  ].includes(event.type)).at(-1);
+}
 export const instrumentReadings: Record<string, string[]> = {
   "ph-meter": ["pH"],
   thermometer: ["Suhu (°C)"],
@@ -37,6 +45,27 @@ export function measurementFeedback(entity: Entity): string {
   return key && values[key] !== undefined
     ? `${key}: ${number(values[key])}.`
     : "";
+}
+export function selectionFeedback(entity: Entity): Feedback {
+  const paperResult = litmusExplanation(entity);
+  return {
+    title: `${entity.label} dipilih.`,
+    detail: paperResult
+      ? `${paperResult.summary} ${paperResult.reason}`
+      : measurementFeedback(entity) || entity.status || "Benda belum diubah. Tindakan yang tersedia ada di panel benda.",
+    hint: paperResult?.hint || "Kamu bisa memilih tindakan atau mengambil benda lain.",
+    target: entity.id,
+  };
+}
+export function failedDropFeedback(kind: "litmus" | "pour" | "rack" | "outside"): Feedback {
+  const explanations = {
+    litmus: ["Kertas belum dicelupkan.", "Tujuan harus berupa wadah terbuka berisi cairan.", "Isi wadah dan buka penutupnya, lalu lepaskan kertas di atas cairan."],
+    pour: ["Bahan belum dituang.", "Sumber harus berisi bahan yang bisa dituang dan kedua benda harus terbuka serta berbeda.", "Periksa isi sumber dan penutup wadah, lalu coba lagi."],
+    rack: ["Tabung belum masuk ke rak.", "Slot hanya menerima tabung reaksi dan harus kosong.", "Pilih tabung reaksi, lalu gunakan slot kosong."],
+    outside: ["Peletakan dibatalkan.", "Benda dilepas di luar tujuan yang tersedia. Meja tidak diubah.", "Lepaskan benda di meja, wadah terbuka, atau slot rak yang sesuai."],
+  };
+  const [title, detail, hint] = explanations[kind];
+  return { title, detail, hint };
 }
 const result = (
   title: string,
@@ -68,6 +97,12 @@ export function actionFeedback(
         "rack",
       );
     const material = materials[added.material];
+    if (isLitmus(added.material)) return result(
+      `${added.label} sudah di meja.`,
+      "Kertas belum diuji. Warna yang terlihat adalah warna awal strip.",
+      "Seret dan lepaskan kertas di atas cairan untuk mencelupkan dan melihat hasilnya.",
+      added.id,
+    );
     return result(
       `${added.label} sudah di meja.`,
       material.kind === "container"
@@ -153,6 +188,13 @@ export function actionFeedback(
         "Pilih benda tujuan dari daftar.",
       );
     const connected = source.connections.includes(target.id);
+    const paper = isLitmus(source.material) ? source : isLitmus(target.material) ? target : undefined;
+    const paperResult = paper && litmusExplanation(paper);
+    if (paper) return result(
+      connected ? "Kertas lakmus diuji." : "Kertas lakmus diangkat.",
+      paperResult ? `${paperResult.summary} ${paperResult.reason}` : `${paper.status || "Warna kertas tetap."} Warna dan isi larutan tidak diubah oleh kertas.`,
+      paperResult?.hint || "Lakmus menunjukkan sifat asam/basa, bukan angka pH yang tepat.", paper.id,
+    );
     const reading = measurementFeedback(source) || measurementFeedback(target);
     return result(
       connected
@@ -290,7 +332,7 @@ export function actionFeedback(
   }
   if (action.type === "move")
     return result(
-      "Posisi benda diubah.",
+      `${entity?.label || previous?.label || "Benda"} dipindahkan.`,
       "Benda berpindah di meja. Isinya tetap sama.",
       "Memindahkan benda saja tidak menuang atau menyambungkan bahan.",
       id,

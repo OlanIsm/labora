@@ -3,13 +3,18 @@ import { Entity, LabState } from "@/lib/sandbox/types";
 import { materials } from "@/lib/sandbox/catalog";
 import { Shape } from "./Workbench";
 import { instrumentReadings } from "@/lib/sandbox/feedback";
+import { isLitmus, litmusExplanation } from "@/lib/sandbox/litmus";
 export default function Observations({
   entity,
   state,
+  compact = false,
 }: {
   entity?: Entity;
   state: LabState;
+  compact?: boolean;
 }) {
+  const paper = entity && isLitmus(entity.material);
+  const paperResult = entity && paper ? litmusExplanation(entity) : undefined;
   const container = entity && materials[entity.material]?.kind === "container";
   const meters = entity
     ? state.entities.filter(
@@ -18,7 +23,7 @@ export default function Observations({
           materials[x.material]?.kind === "instrument",
       )
     : [];
-  const readings = Object.entries(entity?.measurements || {}).filter(([key]) =>
+  const readings = Object.entries(entity?.measurements || {}).filter(([key]) => !paper && (
     instrumentReadings[entity?.material || ""]
       ? instrumentReadings[entity!.material].includes(key)
       : !container ||
@@ -31,7 +36,7 @@ export default function Observations({
             (m.material === "balance" && key === "Massa isi (g)"),
         ) ||
         key.includes("katoda") ||
-        key.includes("anoda"),
+         key.includes("anoda")),
   );
   const key = readings[0]?.[0];
   const samples = state.samples
@@ -49,16 +54,20 @@ export default function Observations({
     )
     .join(" ");
   return (
-    <section id="sandbox-observations" className="sandbox-observations">
-      <h2>Pengamatan</h2>
-      <p>
-        {entity
-          ? entity.label
-          : "Pilih alat atau wadah untuk melihat pengukuran."}
-      </p>
-      {entity?.status && (
-        <strong className="sandbox-status">{entity.status}</strong>
-      )}
+    <section id="sandbox-observations" className={`sandbox-observations${compact ? " sandbox-observations-compact" : ""}`} aria-label="Pengamatan benda">
+      {!compact && <h2>Pengamatan</h2>}
+      {entity ? <div className="sandbox-observation-result">
+        {paper && <div className="sandbox-observation-paper" aria-hidden="true"><Shape entity={entity} state={state} /></div>}
+        <div className="sandbox-observation-copy">
+          {compact ? <h3>{entity.label}</h3> : <p>{entity.label}</p>}
+          {paper && <>
+            <strong className="sandbox-observation-conclusion">{paperResult?.summary || "Kertas belum diuji."}</strong>
+            <p>{paperResult?.reason || "Warna strip masih warna awal. Seret kertas ke wadah terbuka berisi cairan untuk menguji sifat larutan."}</p>
+            {paperResult && <p className="sandbox-observation-hint">{paperResult.hint}</p>}
+          </>}
+          {!paper && entity.status && <strong className="sandbox-status">{entity.status}</strong>}
+        </div>
+      </div> : <p>Pilih alat atau wadah di meja untuk melihat hasilnya.</p>}
       {entity?.material === "microscope" && (
         <div className="sandbox-specimen-preview">
           <Shape entity={entity} state={state} magnified />
@@ -74,7 +83,7 @@ export default function Observations({
           nilainya.
         </p>
       )}
-      <dl>
+      {readings.length > 0 && <dl>
         {readings.slice(0, 3).map(([label, value]) => (
           <div key={label}>
             <dt>{label}</dt>
@@ -85,7 +94,7 @@ export default function Observations({
             </dd>
           </div>
         ))}
-      </dl>
+      </dl>}
       {readings.length > 3 && (
         <details>
           <summary>Semua hasil pengukuran</summary>
@@ -120,8 +129,8 @@ export default function Observations({
           </figure>
         </details>
       )}
-      <details>
-        <summary>Log kejadian ({state.events.length})</summary>
+      <details className="sandbox-observation-history">
+        <summary>Riwayat meja ({state.events.length})</summary>
         <ol className="sandbox-event-log">
           {[...state.events]
             .reverse()

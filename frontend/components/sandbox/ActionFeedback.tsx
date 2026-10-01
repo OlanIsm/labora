@@ -4,27 +4,38 @@ export default function ActionFeedback({
   feedback,
   message,
   onNext,
+  compact = false,
+  onDismiss,
 }: {
   feedback: Feedback | null;
   message?: string;
   onNext: (next: NonNullable<Feedback["next"]>, target?: string) => void;
+  compact?: boolean;
+  onDismiss?: () => void;
 }) {
   return (
     <section
-      className="sandbox-feedback"
+      className={`sandbox-feedback ${compact ? "sandbox-feedback-compact" : ""} ${!message && !feedback ? "sandbox-feedback-empty" : ""}`}
       role="status"
       aria-live="polite"
       aria-atomic="true"
       aria-label="Hasil tindakan"
     >
+      {(feedback || message) && onDismiss && <button className="sandbox-feedback-dismiss" aria-label="Tutup feedback" onClick={onDismiss}>Tutup</button>}
       {message ? (
         <p>{message}</p>
       ) : feedback ? (
         <>
           <strong>{feedback.title}</strong>
-          <p>{feedback.detail}</p>
+          {compact ? (
+            <details key={feedback.title + feedback.detail}>
+              <summary>Penjelasan</summary>
+              <p>{feedback.detail}</p>
+              <small>{feedback.hint}</small>
+            </details>
+          ) : <p>{feedback.detail}</p>}
           <div>
-            <small>{feedback.hint}</small>
+            {!compact && <small>{feedback.hint}</small>}
             {feedback.next && (
               <button onClick={() => onNext(feedback.next!, feedback.target)}>
                 {feedback.next === "rack"

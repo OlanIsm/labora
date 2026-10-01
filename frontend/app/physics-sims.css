@@ -1,0 +1,455 @@
+.sim-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.sim-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sim-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--teal-light, #dff5f1);
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.sim-heading h1 {
+  margin: 0;
+}
+.sim-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sim-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+.sim-stage-column {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.sim-stage {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line, #e1e7ed);
+  background: #fff;
+}
+.sim-canvas-container {
+  position: relative;
+  width: 100%;
+}
+.sim-object-selector { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px; background: var(--surface, #fff); }
+.sim-object-selector [aria-pressed="true"] { background: #fff3bc; border-color: #806500; }
+.sim-chip { cursor: pointer; }
+.sim-chip:hover { border-color: #156b91; }
+.sim-field input[type="range"] { cursor: ew-resize; min-height: 44px; }
+.sim-formula summary::after, .sim-quiz summary::after { content: "Buka"; margin-left: auto; font-size: .8125rem; }
+.sim-formula[open] summary::after, .sim-quiz[open] summary::after { content: "Tutup"; }
+.sim-canvas-container canvas {
+  display: block;
+  width: 100%;
+  touch-action: none;
+}
+.sim-controls {
+  background: #fff;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 16px;
+  padding: 16px;
+  min-width: 0;
+}
+.sim-controls-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.sim-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sim-fieldset legend {
+  font-weight: 800;
+  font-size: 0.875rem;
+  padding: 0;
+  margin-bottom: 2px;
+}
+.sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.875rem;
+}
+.sim-field-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.sim-field-label strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--blue-ink, #156b91);
+}
+.sim-field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.sim-field input[type="range"] {
+  width: 100%;
+  min-height: 32px;
+}
+.sim-field select {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--control-border, #c7d2dd);
+  padding: 8px;
+  background: #fff;
+}
+.sim-hint {
+  font-size: 0.8125rem;
+  color: var(--muted, #68788c);
+  margin: 0;
+}
+.sim-level-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sim-chip {
+  border: 1px solid var(--control-border, #c7d2dd);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  min-height: 44px;
+}
+.sim-chip.active {
+  background: var(--blue, #5ec8ff);
+  border-color: transparent;
+}
+.sim-data-panel {
+  background: #fff;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 16px;
+  padding: 16px;
+}
+.sim-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.sim-data-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sim-data-grid dt {
+  font-size: 0.75rem;
+  color: var(--muted, #68788c);
+}
+.sim-data-grid dd {
+  margin: 0;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.sim-formula {
+  background: #fff;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.sim-formula summary {
+  font-weight: 800;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.sim-formula-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+.sim-formula-body p {
+  margin: 0;
+}
+.sim-energy-bar {
+  display: flex;
+  height: 28px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line, #e1e7ed);
+}
+.sim-energy-bar span {
+  display: block;
+  height: 100%;
+}
+.sim-energy-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+  margin-top: 8px;
+}
+.sim-energy-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sim-energy-legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+.sim-outcome-banner {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+.sim-outcome-banner.success {
+  background: #e4f6ea;
+  color: #1d7a3f;
+}
+.sim-outcome-banner.warning {
+  background: #fff3e0;
+  color: #a05a00;
+}
+.sim-force-arrow-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.sim-grid-cells {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols, 10), 1fr);
+  gap: 2px;
+}
+.sim-fisika-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.sim-fisika-card {
+  background: #fff;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.sim-fisika-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(20, 36, 59, 0.08);
+}
+.sim-fisika-card h3 {
+  margin: 0;
+}
+.sim-fisika-card p {
+  margin: 0;
+  color: var(--muted, #68788c);
+  font-size: 0.9375rem;
+}
+@media (max-width: 900px) {
+  .sim-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim-fisika-card {
+    transition: none;
+  }
+}
+
+/* Ellie mascot + speech bubble, mirrors the chemistry feature's Leo pattern. */
+.sim-mascot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #eef4fb;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 16px;
+  padding: 12px 16px;
+}
+.sim-objective { max-width: 65ch; margin: 12px 0 0; font-size: 1rem; }
+.sim-guide { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.sim-guide .sim-mascot { flex: 1 1 360px; }
+.sim-speech strong { display: block; margin-bottom: 4px; }
+.sim-action-row-inline { display: flex; gap: 10px; flex-wrap: wrap; }
+.sim-experiment-explanation { padding: 8px 0; max-width: 75ch; }
+.sim-experiment-explanation h2 { font-size: 1.35rem; margin-bottom: 8px; }
+.sim-affordance-hint { max-width: 100%; border-radius: 12px; line-height: 1.5; }
+.sim-mascot > svg {
+  flex: none;
+  filter: drop-shadow(0 4px 6px rgba(76, 84, 106, 0.14));
+}
+.sim-speech {
+  position: relative;
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 14px;
+  box-shadow: 0 3px 10px rgba(31, 36, 48, 0.08);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.sim-speech:before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 16px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  transform: rotate(45deg);
+}
+
+/* Quiz panel, same disclosure language as sim-formula. */
+.sim-quiz {
+  background: #fff;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+.sim-quiz summary {
+  font-weight: 800;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sim-quiz-score {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--blue-ink, #156b91);
+  background: var(--teal-light, #dff5f1);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+.sim-quiz-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.sim-quiz-question {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sim-quiz-prompt {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-weight: 700;
+  margin: 0;
+}
+.sim-quiz-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.sim-quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid var(--line, #e1e7ed);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  min-height: 44px;
+}
+.sim-quiz-option:not(:disabled):hover {
+  border-color: var(--blue, #5ec8ff);
+  background: #eaf9ff;
+}
+.sim-quiz-option.correct {
+  border-color: #16a34a;
+  background: #e4f6ea;
+  color: #15803d;
+  font-weight: 700;
+}
+.sim-quiz-option.incorrect {
+  border-color: #dc2626;
+  background: #fff0f0;
+  color: #a33b3b;
+}
+.sim-quiz-explanation {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted, #68788c);
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+/* Explicit affordance cues: anything the student can click or drag must
+   look interactive before they try it, not just respond after. */
+.sim-affordance-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--blue-ink, #156b91);
+  background: #eaf9ff;
+  border: 1px dashed var(--blue, #5ec8ff);
+  border-radius: 999px;
+  padding: 4px 10px;
+  margin-bottom: 8px;
+  width: fit-content;
+}
+.sim-draggable-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(47, 111, 237, 0.85);
+  border-radius: 999px;
+  padding: 3px 8px;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sim-mascot,
+  .sim-quiz-option {
+    transition: none;
+  }
+}

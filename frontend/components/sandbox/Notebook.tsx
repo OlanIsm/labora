@@ -7,11 +7,13 @@ export default function Notebook({
   entity,
   dispatch,
   onNote,
+  onFeedback,
 }: {
   state: LabState;
   entity?: Entity;
   dispatch: (a: Action) => void;
   onNote: () => void;
+  onFeedback?: (message: string) => void;
 }) {
   const [hypothesis, setHypothesis] = useState(""),
     [observation, setObservation] = useState(""),
@@ -77,11 +79,17 @@ export default function Notebook({
         <div className="sandbox-action-row">
           <button
             disabled={!state.notes.length}
-            onClick={() => download("catatan-labora.txt", text)}
+            onClick={() => {
+              download("catatan-labora.txt", text);
+              onFeedback?.("Ekspor catatan dimulai. Periksa unduhan browser.");
+            }}
           >
             Ekspor teks
           </button>
-          <button disabled={!state.notes.length} onClick={() => window.print()}>
+          <button disabled={!state.notes.length} onClick={() => {
+            onFeedback?.("Dialog cetak dibuka. Pilih printer atau Simpan PDF; catatan tetap tersimpan di meja.");
+            window.print();
+          }}>
             Cetak / simpan PDF
           </button>
         </div>
