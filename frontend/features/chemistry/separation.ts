@@ -73,30 +73,37 @@ export function separate(
   return moved;
 }
 
-export function vaporize(entity: Entity): Portion[] {
+export function solventBoilingPoint(portion: Portion): number | undefined {
+  const material = materials[portion.material];
+  if (!material || portion.volume <= 0 || portion.mass <= 1e-10 || (!material.concentration && !["water", "tap-water", "ethanol"].includes(material.id))) return undefined;
+  const soluteMass = material.concentration ? portion.moles * (material.molarMass || 0) : 0;
+  if (portion.mass - soluteMass <= 1e-10) return undefined;
+  return material.id === "ethanol" ? 78.37 : 100;
+}
+
+export const latentHeat = (material: string) => material === "ethanol" ? 846 : 2257;
+
+export function vaporize(entity: Entity, energyBudget?: number): Portion[] {
   const vapor: Portion[] = [];
-  // TODO-REVIEW-GURU: each operation evaporates up to 20% above the boiling point; no vapor-liquid equilibrium or energy balance yet.
-  for (const portion of entity.contents) {
+  let energy = energyBudget === undefined ? Infinity : Math.max(0, energyBudget);
+  // TODO-REVIEW-GURU: pure-solvent boiling points and latent heats approximate mixtures; manual operations process one 20% fraction.
+  for (const portion of [...entity.contents].sort((a, b) => (solventBoilingPoint(a) ?? Infinity) - (solventBoilingPoint(b) ?? Infinity))) {
     const material = materials[portion.material];
     const aqueous = !!material?.concentration;
-    if (
-      !material ||
-      portion.volume <= 0 ||
-      (!aqueous && !["water", "tap-water", "ethanol"].includes(material.id))
-    )
-      continue;
-    const boilingPoint = material.id === "ethanol" ? 78.37 : 100;
+    const boilingPoint = solventBoilingPoint(portion);
+    if (boilingPoint === undefined) continue;
     if (entity.temperature < boilingPoint) continue;
     const soluteMass = aqueous ? portion.moles * (material.molarMass || 0) : 0;
     const available = Math.max(0, portion.mass - soluteMass);
     const mass = Math.min(
       available,
-      portion.volume * 0.2 * (material.density || 1),
+      energyBudget === undefined ? portion.volume * 0.2 * (material.density || 1) : energy / latentHeat(material.id),
     );
     if (mass <= 0) continue;
     const volume = mass / (material.density || 1);
     const fraction = mass / Math.max(portion.mass, 1e-12);
     portion.mass -= mass;
+    energy -= mass * latentHeat(material.id);
     portion.volume = Math.max(0, portion.volume - volume);
     if (!aqueous) portion.moles *= 1 - fraction;
     const id = material.id === "ethanol" ? "ethanol" : "water";

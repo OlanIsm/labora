@@ -120,7 +120,9 @@ assert.ok(!balloonExplanation.includes("<details"));
 const beakerExplanation = renderToStaticMarkup(<EquipmentExplanation entity={reduceLab(initialLab(), { type: "add", material: "beaker" }).entities[0]} />);
 assert.ok(beakerExplanation.includes("Gelas kimia"));
 assert.ok(!beakerExplanation.includes("belum menampung gas secara fisik"));
-assert.equal(renderToStaticMarkup(<EquipmentExplanation entity={reduceLab(initialLab(), { type: "add", material: "water" }).entities[0]} />), "");
+const waterExplanation = renderToStaticMarkup(<EquipmentExplanation entity={reduceLab(initialLab(), { type: "add", material: "water" }).entities[0]} />);
+assert.ok(waterExplanation.includes("Air suling menjadi pelarut"));
+assert.ok(waterExplanation.includes("Cara pakai di sini:") && waterExplanation.includes("Batas simulasi:"));
 const empty = initialLab();
 const previewState = reduceLab(empty, { type: "add", material: "beaker" });
 const previewFeedback = actionFeedback(
@@ -175,10 +177,10 @@ assert.equal((toolsGroup.match(/class="sandbox-rack-item/g) || []).length,
   catalog.filter((m) => (m.discipline === "chemistry" || m.kind === "container") && m.kind !== "material").length);
 assert.ok((materialsGroup.match(/class="sandbox-rack-item/g) || []).length > 1);
 const sandboxCss = readFileSync(resolve("features/chemistry/chemistry.css"), "utf8");
-const horizontalRackRule = sandboxCss.match(/\.canvas-shell \.sandbox\.chemistry \.sandbox-rack-group \.sandbox-rack-list\s*\{([^}]+)\}/)?.[1];
-assert.ok(horizontalRackRule?.includes("flex-direction: row"), "Horizontal rack must override the legacy column direction");
-assert.ok(horizontalRackRule?.includes("flex-wrap: nowrap"));
-assert.ok(rack.includes('tabindex="0" aria-label="Daftar alat, gulir ke samping"'));
+assert.ok(!sandboxCss.includes(".canvas-shell"), "Chemistry uses the regular application shell, like physics");
+assert.ok(sandboxCss.includes(".sandbox.chemistry .sandbox-right"));
+assert.ok(sandboxCss.includes("overflow: auto"), "The chemistry sidebar keeps its inventory scrollable");
+assert.ok(rack.includes('tabindex="0" aria-label="Daftar alat, gulir untuk melihat lainnya"'));
 const compactFeedback = renderToStaticMarkup(
   <ActionFeedback feedback={previewFeedback} onNext={noop} compact />,
 );
@@ -271,11 +273,11 @@ if (process.env.LABORA_UI_PREVIEW === "1") {
   mkdirSync(output, { recursive: true });
   const css = ["styles.css", "sandbox.css", "specimens.css"]
     .map((file) => readFileSync(resolve("app", file), "utf8"))
-    .join("\n");
+    .join("\n") + "\n" + sandboxCss;
   const surface = renderToStaticMarkup(
     <main
       style={{ maxWidth: 1200, margin: "auto", padding: 24 }}
-      className="sandbox"
+      className="sandbox chemistry"
     >
       <header className="sandbox-heading">
         <div>

@@ -103,6 +103,8 @@ export function chemical(s: LabState, e: Entity, dt: number) {
     }
     if (r.model === "fruit-battery") { e.measurements["Tegangan sel (V)"] = 0.9; e.applied[r.id] = 1; }
     if (r.model === "electrolysis" || r.model === "electrolysis-copper") {
+      // TODO-REVIEW-GURU: prioritize the supported CuSO4 model over solvent water; competing electrode reactions are not modeled.
+      if (r.model === "electrolysis" && has(e, "cuso4")) continue;
       const device = s.entities.find((x) => e.connections.includes(x.id) && x.material === "electrolysis" && x.active);
       if (!device) continue;
       const charge = Math.max(0, device.params.voltage / Math.max(1, device.params.resistance)) * dt;
@@ -132,7 +134,7 @@ export function chemical(s: LabState, e: Entity, dt: number) {
   e.measurements["Volume (mL)"] = totalVolume(e);
   e.measurements["Padatan tak larut (g)"] = suspendedMass(e);
   e.measurements["Massa isi (g)"] = totalMass(e) + (e.sealed ? e.params.gasMass || 0 : 0);
-  e.measurements["Gas terbentuk (mL)"] = e.gas * molarGasVolume(e.temperature);
+  e.measurements["Gas terbentuk (mL)"] = e.gas * molarGasVolume(e.temperature) + (e.measurements["H₂ katoda (mL)"] || 0) + (e.measurements["O₂ anoda (mL)"] || 0);
   const ions = e.contents.reduce((n, p) => n + (materials[p.material]?.ions || 0) * p.moles, 0);
   const weak = e.contents.reduce((n, p) => n + (materials[p.material]?.ka || materials[p.material]?.kb
     ? Math.sqrt(1.8e-5 * Math.max(0, p.moles / Math.max(0.001, totalVolume(e) / 1000))) : 0), 0);

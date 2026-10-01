@@ -21,7 +21,6 @@ import {
   RotateCcw,
   Undo2,
   Redo2,
-  X,
 } from "lucide-react";
 import { useSandbox } from "@/hooks/useSandbox";
 import { Discipline, LabState } from "@/lib/sandbox/types";
@@ -51,6 +50,8 @@ import CoachMarks, { useIntroduction } from "./CoachMarks";
 import LabErrorBoundary from "./LabErrorBoundary";
 import ActionFeedback from "./ActionFeedback";
 import EquipmentExplanation from "./EquipmentExplanation";
+import ChemistryGuide from "@/features/chemistry/ChemistryGuide";
+import { findBenchSpace } from "@/features/chemistry/placement";
 
 const names = {
   chemistry: "Kimia",
@@ -76,7 +77,6 @@ function Desk({ discipline }: { discipline: Discipline }) {
     null,
   );
   const lastEvent = useRef<number | null>(null);
-  const results = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     if (!ready) {
       lastEvent.current = null;
@@ -112,12 +112,14 @@ function Desk({ discipline }: { discipline: Discipline }) {
     setActions((old) => (old.includes(type) ? old : [...old, type]));
   const entity = state.entities.find((e) => e.id === selected);
   const simpleChemistry = discipline === "chemistry";
+  const [expandedBench, setExpandedBench] = useState(false);
   function startIntroduction() {
     setPanelOpen(true);
-    setTab("rack");
+    setTab(simpleChemistry && entity ? "controls" : "rack");
     intro.start();
   }
   function send(a: HistoryAction) {
+    let placementWarning = "";
     if (a.type === "move" || a.type === "add") {
       const bench = document.getElementById("sandbox-bench")?.getBoundingClientRect();
       const id = a.type === "move" ? a.id : undefined;
@@ -125,17 +127,35 @@ function Desk({ discipline }: { discipline: Discipline }) {
       const material = a.type === "add" ? a.material : item?.material;
       const rect = item && !item.rackPlacement ? document.getElementById(`sandbox-entity-${item.id}`)?.getBoundingClientRect() : undefined;
       const mobile = window.matchMedia("(max-width: 760px)").matches;
+      if (simpleChemistry && bench && a.type === "add" && a.x === undefined && a.y === undefined) {
+        const occupied = state.entities.filter(e => !e.rackPlacement).flatMap(e => {
+          const node = document.getElementById(`sandbox-entity-${e.id}`);
+          if (!node) return [];
+          const rect = node.getBoundingClientRect();
+          return [{ x: rect.left - bench.left, y: rect.top - bench.top, width: rect.width, height: rect.height }];
+        });
+        const position = findBenchSpace(bench.width, bench.height, material === "rack" ? 216 : mobile ? 70 : 90, material === "rack" ? 184 : mobile ? 128 : 140, occupied);
+        if (position) a = { ...a, ...position };
+        else placementWarning = "Meja mulai padat. Perluas meja atau geser benda untuk membuat ruang.";
+      }
       if (bench && a.x !== undefined && a.y !== undefined) {
-        const fitted = fitOnBench(a.x, a.y, bench.width, bench.height,
-          rect?.width ?? (material === "rack" ? 216 : mobile ? 70 : 90),
-          rect?.height ?? (material === "rack" ? 184 : mobile ? 128 : 140));
-        a = { ...a, ...fitted };
+        const inset = simpleChemistry ? 12 : 0;
+        const marginX = bench.width > 0 ? inset / bench.width * 100 : 0;
+        const marginY = bench.height > 0 ? inset / bench.height * 100 : 0;
+        const fitted = fitOnBench(a.x - marginX, a.y - marginY, bench.width, bench.height,
+          (rect?.width ?? (material === "rack" ? 216 : mobile ? 70 : 90)) + inset * 2,
+          (rect?.height ?? (material === "rack" ? 184 : mobile ? 128 : 140)) + inset * 2);
+        a = { ...a, x: fitted.x + marginX, y: fitted.y + marginY };
       }
     }
     pending.current = { action: a, before: state };
-    setMessage("");
+    setMessage(placementWarning);
     dispatch(a);
     mark(a.type);
+    if (simpleChemistry && a.type === "connect" && (a.source === selected || a.target === selected)) {
+      const other = a.source === selected ? a.target : a.source;
+      setTarget(entity?.connections.includes(other) ? "" : other);
+    }
     if (a.type === "remove" && a.id === selected) setSelected("");
     if (a.type === "pour") {
       setSelected(a.target);
@@ -169,7 +189,6 @@ function Desk({ discipline }: { discipline: Discipline }) {
     }
     if (next === "observe") {
       if (id) setSelected(id);
-      if (results.current) results.current.open = true;
     }
     requestAnimationFrame(() =>
       document
@@ -295,10 +314,11 @@ function Desk({ discipline }: { discipline: Discipline }) {
     setMessage("Ekspor gambar SVG dimulai. Periksa unduhan browser.");
   }
   if (!ready) return <p role="status">Menyiapkan meja bebas...</p>;
+  const controlTarget = simpleChemistry && !target ? entity?.connections[0] || "" : target;
   const controls = <>
     {entity?.material === "rack" && <p className="sandbox-small">Seret tabung ke slot kosong. Atau pilih tabung di meja lalu klik slot. Tanpa tabung di meja yang dipilih, klik slot membuat tabung baru.</p>}
     {entity?.rackPlacement && <button onClick={releaseTube}>Keluarkan dari rak</button>}
-    <ApparatusControls entity={entity} state={state} dispatch={send} target={target}
+    <ApparatusControls entity={entity} state={state} dispatch={send} target={controlTarget} playing={speed > 0} onRun={() => changeSpeed(1)}
       setTarget={(id) => {
         setTarget(id);
         setMessage("");
@@ -319,6 +339,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
         });
       }} onAction={mark} />
   </>;
+  const feedbackView = <ActionFeedback feedback={feedback} message={message} onNext={feedbackNext} condensed={simpleChemistry} onDismiss={() => { setFeedback(null); setMessage(""); }} />;
   return (
     <DndContext
       sensors={sensors}
@@ -340,19 +361,18 @@ function Desk({ discipline }: { discipline: Discipline }) {
         setMessage("Drag dibatalkan. Meja tidak diubah.");
       }}
     >
-      <div className={`sandbox ${discipline}`}>
+      <div className={`sandbox ${discipline}`} data-playing={speed > 0}>
         <header className="sandbox-heading">
           <div>
             <h1>Lab {names[discipline]}</h1>
-            {!simpleChemistry && <p>Eksperimen bebas · SMA/MA kelas X–XII</p>}
+            <p>{simpleChemistry ? <><strong>Misi percobaan:</strong> Amati perubahan larutan saat dicampur, dipanaskan, atau diuji. Urutan percobaan bebas.</> : "Eksperimen bebas · SMA/MA kelas X–XII"}</p>
           </div>
-          <div className="sandbox-action-row">
-            {simpleChemistry && <Link href="/laboratories">Keluar lab</Link>}
-            {!simpleChemistry && <button onClick={startIntroduction}>
+          {!simpleChemistry && <div className="sandbox-action-row">
+            <button onClick={startIntroduction}>
               <CircleHelp size={17} />
               Cara Pakai
-            </button>}
-          </div>
+            </button>
+          </div>}
         </header>
         {!simpleChemistry && <nav className="sandbox-rooms" aria-label="Pilihan ruang">
           {(Object.keys(names) as Discipline[]).map((id) => (
@@ -367,7 +387,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
           ))}
         </nav>}
         <div id="sandbox-toolbar" className="sandbox-toolbar">
-          <button
+          {!simpleChemistry && <button
             aria-label="Batalkan tindakan"
             title="Batalkan tindakan"
             disabled={!history.past.length}
@@ -379,8 +399,8 @@ function Desk({ discipline }: { discipline: Discipline }) {
           >
             <Undo2 size={18} />
             <span>Batalkan</span>
-          </button>
-          <button
+          </button>}
+          {!simpleChemistry && <button
             aria-label="Ulangi tindakan"
             title="Ulangi tindakan"
             disabled={!history.future.length}
@@ -391,7 +411,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
           >
             <Redo2 size={18} />
             <span>Ulangi</span>
-          </button>
+          </button>}
           {!simpleChemistry && <span className="sandbox-clock">{state.time.toFixed(1)} s</span>}
           <button
             className="sandbox-play"
@@ -401,11 +421,15 @@ function Desk({ discipline }: { discipline: Discipline }) {
             {speed ? <Pause size={18} /> : <Play size={18} />}
             {speed ? "Jeda" : "Jalankan"}
           </button>
+          {simpleChemistry && <button aria-label="Reset simulasi" onClick={() => { setSpeed(0); send({ type: "reset", discipline }); setSelected(""); mark("undo"); }}><RotateCcw size={18} />Reset</button>}
           <details className="sandbox-menu">
             <summary>Pilihan meja</summary>
             <div className="sandbox-menu-content">
               {simpleChemistry && <>
+                <button aria-label="Batalkan tindakan" disabled={!history.past.length} onClick={() => { setSpeed(0); send({ type: "undo" }); mark("undo"); }}><Undo2 size={18} />Batalkan</button>
+                <button aria-label="Ulangi tindakan" disabled={!history.future.length} onClick={() => { setSpeed(0); send({ type: "redo" }); }}><Redo2 size={18} />Ulangi</button>
                 <button onClick={startIntroduction}><CircleHelp size={17} />Cara pakai</button>
+                <Link href="/laboratories">Pilihan lab</Link>
                 <details className="sandbox-room-switcher">
                   <summary>Ganti lab</summary>
                   <nav aria-label="Pilihan ruang">
@@ -455,7 +479,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
                 <Download size={18} />
                 Gambar SVG
               </button>
-              <button
+              {!simpleChemistry && <button
                 onClick={() => {
                   setSpeed(0);
                   send({ type: "reset", discipline });
@@ -465,7 +489,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
               >
                 <RotateCcw size={18} />
                 Reset meja
-              </button>
+              </button>}
               <button onClick={() => setHelp(!help)} aria-expanded={help}>
                 Bantuan & teori
               </button>
@@ -482,30 +506,11 @@ function Desk({ discipline }: { discipline: Discipline }) {
             sebelum menutup halaman.
           </p>
         )}
-        <div className={simpleChemistry ? `sandbox-inspector ${entity ? "has-selection" : ""}` : undefined}>
-        {simpleChemistry && entity && <div className="sandbox-inspector-heading">
-          <h2>{entity.label}</h2>
-          <button className="sandbox-inspector-close" aria-label="Tutup info alat" onClick={() => {
-          setSelected("");
-          setFeedback(null);
-          setMessage("");
-        }}><X size={20} aria-hidden="true" /></button>
-        </div>}
-         <ActionFeedback
-          feedback={feedback}
-          message={message}
-          onNext={feedbackNext}
-          compact={simpleChemistry}
-          onDismiss={() => { setFeedback(null); setMessage(""); }}
-         />
-         {simpleChemistry && <EquipmentExplanation entity={entity} compact />}
-        {simpleChemistry && entity && <>
-          <button aria-expanded={tab === "controls"} onClick={() => setTab(tab === "controls" ? "rack" : "controls")}>
-            {tab === "controls" ? "Tutup tindakan" : "Tindakan alat"}
-          </button>
-          {tab === "controls" && controls}
-        </>}
-        </div>
+        {simpleChemistry && <ChemistryGuide open={intro.open} state={state} selected={entity} playing={speed > 0} onOpen={startIntroduction} onClose={intro.dismiss} onNavigate={target => {
+          if (target === "rack" || target === "controls") { setPanelOpen(true); setTab(target); }
+          requestAnimationFrame(() => document.getElementById(`sandbox-${target}`)?.scrollIntoView({ block: "nearest", behavior: "auto" }));
+        }} />}
+        {!simpleChemistry && <div>{feedbackView}</div>}
         {intro.offer && !simpleChemistry && (
           <aside className="sandbox-intro-offer">
             <span>Baru pertama mencoba? Mau lihat cara pakai?</span>
@@ -514,7 +519,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
           </aside>
         )}
         <CoachMarks
-          open={intro.open}
+          open={intro.open && !simpleChemistry}
           onClose={intro.dismiss}
           actions={actions}
           onNavigate={(target) => {
@@ -558,17 +563,21 @@ function Desk({ discipline }: { discipline: Discipline }) {
         )}
         <div className="sandbox-layout">
           <div className="sandbox-left">
+            {simpleChemistry && <div className="chemistry-bench-toolbar"><strong>Meja percobaan</strong><button aria-pressed={expandedBench} onClick={() => setExpandedBench(!expandedBench)}>{expandedBench ? "Ukuran normal" : "Perluas meja"}</button></div>}
+            {simpleChemistry && feedbackView}
             <Workbench
               state={state}
+              expanded={simpleChemistry && expandedBench}
               selected={selected}
               dispatch={send}
               onPlaceTube={placeTube}
               onSelect={(id) => {
                 setSelected(id);
-                setTab(simpleChemistry ? "rack" : "controls");
+                setTab("controls");
                 setPanelOpen(true);
                 setMessage("");
-                const item = state.entities.find((e) => e.id === id);
+                 const item = state.entities.find((e) => e.id === id);
+                 if (simpleChemistry) setTarget(item?.connections[0] || "");
                 if (item)
                   setFeedback(selectionFeedback(item));
               }}
@@ -576,26 +585,27 @@ function Desk({ discipline }: { discipline: Discipline }) {
             <p className="sandbox-safety">
               {simpleChemistry ? "Simulasi saja. Jangan mencoba campuran berbahaya di dunia nyata." : "K3 virtual: jangan mencoba kombinasi berbahaya di dunia nyata. Tumpahan, panas, dan kerusakan di sini hanya simulasi."}
             </p>
-            {!simpleChemistry && <Observations entity={entity} state={state} />}
-            {!simpleChemistry && <Notebook
+            <Observations entity={entity} state={state} />
+            <Notebook
               state={state}
               entity={entity}
               dispatch={send}
               onNote={() => mark("note")}
               onFeedback={setMessage}
-            />}
+            />
           </div>
-          <aside className={`sandbox-right ${panelOpen || simpleChemistry ? "panel-open" : ""}`}>
-            {!simpleChemistry && <button
+          <aside className={`sandbox-right ${panelOpen ? "panel-open" : ""}`}>
+            {simpleChemistry && <h2 className="chemistry-panel-title">Rak & pengaturan</h2>}
+            <button
               className="sandbox-panel-disclosure"
               aria-expanded={panelOpen}
               aria-controls="sandbox-panel-body"
               onClick={() => setPanelOpen(!panelOpen)}
             >
-              Rak & pengaturan {panelOpen ? "· tutup" : "· buka"}
-            </button>}
+              {simpleChemistry ? (panelOpen ? "Sembunyikan panel" : "Buka alat & pengaturan") : `Rak & pengaturan ${panelOpen ? "· tutup" : "· buka"}`}
+            </button>
             <div id="sandbox-panel-body" className="sandbox-panel-body">
-              {!simpleChemistry && <div
+              <div
                 className="sandbox-panel-tabs"
                 role="group"
                 aria-label="Panel meja"
@@ -613,22 +623,13 @@ function Desk({ discipline }: { discipline: Discipline }) {
                 >
                   {simpleChemistry ? "Atur benda" : "Benda dipilih"}
                 </button>
-              </div>}
-              {(tab === "rack" || simpleChemistry) && (
+              </div>
+              {tab === "rack" && (
                 <Inventory discipline={discipline} onAdd={(id) => add(id)} />
               )}
-              {!simpleChemistry && tab === "controls" && controls}
+              {tab === "controls" && <>{simpleChemistry && <EquipmentExplanation entity={entity} compact />}{controls}</>}
             </div>
           </aside>
-          {simpleChemistry && (
-            <div className="sandbox-records">
-              <details ref={results} className="sandbox-results">
-                <summary>Hasil pengamatan</summary>
-                <Observations entity={entity} state={state} compact />
-              </details>
-              <Notebook state={state} entity={entity} dispatch={send} onNote={() => mark("note")} onFeedback={setMessage} />
-            </div>
-          )}
         </div>
       </div>
       <DragOverlay dropAnimation={null}>

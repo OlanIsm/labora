@@ -5,12 +5,16 @@ import { materials } from "@/lib/sandbox/catalog";
 import { totalVolume } from "@/lib/sandbox/measurements";
 import EquipmentDrawing, { hasEquipmentDrawing } from "./EquipmentDrawing";
 import { renderChemistryShape } from "@/features/chemistry/Shape";
+import ElectrolysisShape from "@/features/chemistry/ElectrolysisShape";
+import { chemistryVisualEffects } from "@/features/chemistry/visualEffects";
 import { renderPhysicsShape } from "@/features/physics/Shape";
 import { renderBiologyShape } from "@/features/biology/Shape";
 
 export function Shape({ entity: e, state, magnified = false }: { entity: Entity; state: LabState; magnified?: boolean }) {
   const m = materials[e.material];
   const model = m.model;
+  const effects = state.discipline === "chemistry" ? chemistryVisualEffects(e, state) : undefined;
+  if (state.discipline === "chemistry" && e.material === "electrolysis") return <ElectrolysisShape entity={e} state={state} />;
   const liquids = e.contents.filter((p) => materials[p.material]?.phase === "liquid" && p.volume > 0);
   const baseLiquid = [...liquids].filter((p) => e.status !== "Dua lapisan" || p.material !== "oil").sort((a, b) => b.volume - a.volume)[0];
   const liquidColor = e.color === "#bde8f4" ? materials[baseLiquid?.material]?.color || e.color : e.color;
@@ -19,10 +23,10 @@ export function Shape({ entity: e, state, magnified = false }: { entity: Entity;
     !(m.discipline === "physics" && ["pendulum", "spring", "fall", "projectile"].includes(model || ""))) {
     return <EquipmentDrawing material={m}
       fill={m.kind === "container" ? totalVolume(e) / (m.capacity || 250) : e.active ? 1 : 0}
-      color={liquidColor} sealed={e.sealed} sediment={!!e.precipitate} gas={e.gas > 0}
+      color={liquidColor} sealed={e.sealed} sediment={!!e.precipitate} gas={effects ? effects.bubbles : e.gas > 0}
       layered={e.status === "Dua lapisan"} layerFraction={oilVolume / Math.max(1e-8, totalVolume(e))}
-      layerColor={materials.oil.color} hot={e.temperature > 70}
-      value={e.material === "ph-meter" ? e.measurements.pH : e.material === "balance" ? e.measurements["Massa isi (g)"] : e.material === "voltmeter" ? e.measurements["Tegangan (V)"] : e.material === "ammeter" ? e.measurements["Arus (A)"] : undefined}
+      layerColor={materials.oil.color} hot={effects ? effects.steam : e.temperature > 70} animated={state.discipline === "chemistry"}
+      value={state.discipline === "chemistry" && e.material === "stopwatch" ? e.measurements["Waktu (s)"] : e.material === "ph-meter" ? e.measurements.pH : e.material === "balance" ? e.measurements["Massa isi (g)"] : e.material === "voltmeter" ? e.measurements["Tegangan (V)"] : e.material === "ammeter" ? e.measurements["Arus (A)"] : undefined}
     />;
   }
   const subjectShape = renderChemistryShape({ entity: e }) || renderPhysicsShape({ entity: e }) || renderBiologyShape({ entity: e, state });

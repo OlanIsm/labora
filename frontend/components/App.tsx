@@ -60,6 +60,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { loadCloud, saveCloudAssignment, saveCloudResult } from "@/lib/cloud";
 import { physicsSimulations, PhysicsSimulationList } from "./physics-sims/Simulations";
+import ChemistryLabList from "@/features/chemistry/ChemistryLabList";
 const Sandbox = dynamic(() => import("./sandbox/Sandbox"), {
   ssr: false,
   loading: () => <p role="status">Memuat meja eksperimen...</p>,
@@ -173,7 +174,7 @@ function Shell({
   const active = (href: string) =>
     pathname === href ||
     (href === "/laboratories" &&
-      (pathname === "/fisika" || pathname.startsWith("/fisika/") ||
+      (pathname === "/kimia" || pathname === "/sandbox/chemistry" || pathname === "/fisika" || pathname.startsWith("/fisika/") ||
         ["/laboratories/", "/experiments/", "/lab/", "/results/"].some((prefix) =>
           pathname.startsWith(prefix),
         ))) ||
@@ -220,7 +221,7 @@ function Shell({
       </div>
     );
   return (
-    <div className={`app-shell ${pathname === "/sandbox/chemistry" || pathname === "/laboratories/chemistry" ? "canvas-shell" : ""}`}>
+    <div className="app-shell">
       <a className="skip-link" href="#main">
         Langsung ke isi
       </a>
@@ -394,7 +395,7 @@ function LabChoices() {
           <div className="lab-choice-head">
             <s.icon size={40} strokeWidth={1.7} />
             <span>
-              {s.id === "physics" ? `${physicsSimulations.length} simulasi` : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
+              {s.id === "physics" ? `${physicsSimulations.length} simulasi` : s.id === "chemistry" ? "Percobaan bebas" : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
             </span>
           </div>
           <h3>{s.name}</h3>
@@ -2733,7 +2734,7 @@ export default function App() {
   const physicsSimulation = physicsSimulations.find((sim) => pathname === `/fisika/${sim.id}`);
   const isPublic =
     ["/", "/login", "/register", "/laboratories"].includes(pathname) ||
-    isSandbox || pathname === "/fisika" || !!physicsSimulation;
+    isSandbox || pathname === "/kimia" || pathname === "/fisika" || !!physicsSimulation;
   useEffect(() => {
     if (ready && !user && !isPublic) router.replace("/login");
   }, [ready, user, isPublic, router]);
@@ -2746,6 +2747,7 @@ export default function App() {
   const assignment = assignments.find((a) => a.id === search.get("assignment"));
   let content: React.ReactNode;
   if (pathname === "/") content = <Landing />;
+  else if (pathname === "/kimia") content = <ChemistryLabList />;
   else if (pathname === "/login" || pathname === "/register")
     content = <Auth onAuth={auth} />;
   else if (pathname === "/dashboard")

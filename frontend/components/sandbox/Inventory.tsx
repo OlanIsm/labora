@@ -181,7 +181,7 @@ export default function Inventory({
         </label>
       </details>}
       {discipline === "chemistry" ? (
-        <div ref={scroller} className="sandbox-rack-groups" tabIndex={0} aria-label={`Daftar ${rackTab === "tools" ? "alat" : "bahan"}, gulir ke samping`}>
+        <div ref={scroller} className="sandbox-rack-groups" tabIndex={0} aria-label={`Daftar ${rackTab === "tools" ? "alat" : "bahan"}, gulir untuk melihat lainnya`}>
           {[
             { name: "Alat", items: tools },
             { name: "Bahan", items: substances },

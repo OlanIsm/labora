@@ -136,7 +136,7 @@ const tools: [string, string, string][] = [
   ["rack", "Rak tabung reaksi", "support"],
   ["funnel", "Corong + kertas saring", "filter"],
   ["stirrer", "Batang pengaduk", "stir"],
-  ["burner", "Pembakar virtual", "heat"],
+  ["burner", "Pembakar", "heat"],
   ["tripod", "Kaki tiga + kasa", "support"],
   ["thermometer", "Termometer", "temperature"],
   ["balance", "Timbangan digital", "mass"],
@@ -202,7 +202,8 @@ export const chemistryTools = tools.map(([id, name, model]): Material => ({
     id,
     name,
     model,
-    kind: ["temperature", "mass", "ph", "time", "conductivity"].includes(model)
+    capacity: id === "dropper" ? 5 : undefined,
+    kind: id === "dropper" ? "container" : ["temperature", "mass", "ph", "time", "conductivity"].includes(model)
       ? "instrument"
       : "apparatus",
     discipline: "chemistry",

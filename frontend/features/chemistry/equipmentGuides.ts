@@ -1,6 +1,10 @@
 import { EquipmentGuide } from "../../lib/sandbox/equipmentGuides";
+import { chemistryMaterialGuides } from "./materialGuides";
+
+export const illustrativeTools = ["tripod", "funnel", "stirrer"];
 
 export const chemistryGuides: Record<string, EquipmentGuide> = {
+  ...chemistryMaterialGuides,
   "litmus-red": {
     purpose: "Lakmus merah menguji sifat asam/basa. Kertas berubah biru dalam larutan basa; larutannya tidak diwarnai.",
     usage: "Seret dan lepaskan kertas di atas cairan. Kertas langsung dicelupkan dan warna strip diperbarui otomatis, tanpa menekan tombol.",
@@ -74,13 +78,13 @@ export const chemistryGuides: Record<string, EquipmentGuide> = {
     limitation: "Batang ini belum bisa digunakan langsung pada wadah. Tombol Nyalakan pada batang pengaduk tidak menjalankan pengadukan.",
   },
   burner: {
-    purpose: "Pembakar virtual memanaskan isi wadah yang tersambung.",
-    usage: "Sambungkan pembakar ke wadah, tekan Nyalakan / jalankan, lalu jalankan waktu simulasi untuk melihat perubahan suhu.",
-    limitation: "Pemanasan memakai model sederhana. Jangan mencoba memanaskan campuran ini di dunia nyata.",
+    purpose: "Pembakar memanaskan isi wadah yang tersambung, dengan suhu target yang dapat diatur.",
+    usage: "Isi gelas dengan air. Sambungkan pembakar ke gelas, atur Suhu target (°C), lalu tekan Nyalakan / jalankan dan Jalankan di toolbar. Pada titik didih model, volume dan massa pelarut berkurang bertahap. Pilih gelas untuk melihat suhu dan jumlah pelarut menguap.",
+    limitation: "Suhu target membatasi pemanasan wadah, bukan suhu api nyata. Model memakai kalor jenis dan kalor penguapan sederhana; kesetimbangan uap-cair campuran, luas permukaan, dan kenaikan titik didih belum dimodelkan. Jangan mencoba campuran ini di dunia nyata.",
   },
   tripod: {
     purpose: "Kaki tiga dan kasa menyangga wadah di atas pembakar. Kasa membantu menyebarkan panas.",
-    usage: "Di sini kaki tiga bisa diletakkan dan dipindahkan sebagai bagian dari susunan alat.",
+    usage: "Di laboratorium nyata, wadah berada di atas kasa dan pembakar di bawahnya. Di simulasi ini kaki tiga hanya ilustrasi; untuk memanaskan, sambungkan pembakar langsung ke wadah.",
     limitation: "Wadah belum bisa dipasang di atasnya. Kaki tiga belum memengaruhi pemanasan atau menyangga benda secara interaktif.",
   },
   thermometer: {
@@ -99,8 +103,8 @@ export const chemistryGuides: Record<string, EquipmentGuide> = {
   },
   stopwatch: {
     purpose: "Stopwatch mengukur selang waktu suatu kegiatan.",
-    usage: "Di sini alat menampilkan Waktu (s) dari waktu simulasi. Tombol Jalankan dan Jeda di toolbar mengendalikan waktu tersebut.",
-    limitation: "Belum ada mulai, berhenti, dan reset khusus stopwatch. Nilainya bukan selang waktu sejak stopwatch dipilih.",
+    usage: "Pilih stopwatch, tekan Mulai stopwatch. Hentikan membekukan pembacaan; Nolkan mengembalikan ke 0. Waktu dijeda bersama simulasi dan mengikuti kecepatannya.",
+    limitation: "Mengukur waktu simulasi, bukan waktu nyata. Menolkan saat berjalan tidak menghentikan stopwatch.",
   },
   "electrolyte-tester": {
     purpose: "Alat uji elektrolit membandingkan kemampuan larutan menghantarkan listrik.",
@@ -109,17 +113,17 @@ export const chemistryGuides: Record<string, EquipmentGuide> = {
   },
   electrolysis: {
     purpose: "Sel elektrolisis menggunakan arus listrik untuk menjalankan reaksi pada elektroda.",
-    usage: "Sambungkan ke wadah berisi bahan yang didukung model, nyalakan sel, lalu jalankan waktu. Pilih wadah untuk melihat hasil pada katoda dan anoda.",
+    usage: "Sambungkan ke wadah, nyalakan sel, lalu jalankan waktu. Pada model air, anoda (+) di kiri menghasilkan O₂ dan katoda (−) di kanan menghasilkan H₂ dengan volume 1:2. Model CuSO₄ menampilkan endapan Cu di katoda, bukan gelembung air bersamaan. Pilih wadah untuk membaca nilainya.",
     limitation: "Hasil bergantung pada larutan dan elektroda. Model belum mencakup semua produk, terutama elektrolisis larutan garam; hasilnya perlu tinjauan guru.",
   },
   chromatography: {
     purpose: "Kertas kromatografi memisahkan komponen tinta karena tiap komponen bergerak berbeda bersama pelarut.",
     usage: "Tuang sampel Pewarna makanan / tinta ke kertas. Sambungkan ke wadah berisi air atau etanol, nyalakan kertas, lalu jalankan waktu simulasi.",
-    limitation: "Jarak pigmen dan nilai Rf merupakan model ilustratif, bukan prediksi untuk tinta nyata. Gambar kertas belum mengikuti perkembangan pemisahan.",
+    limitation: "Jarak pigmen dan nilai Rf merupakan model ilustratif, bukan prediksi untuk tinta nyata. Posisi pigmen mengikuti model, bukan hasil pengukuran laboratorium.",
   },
   balloon: {
     purpose: "Balon dapat membantu menunjukkan gas yang terbentuk dari suatu reaksi, misalnya fermentasi.",
     usage: "Sambungkan balon ke wadah yang menghasilkan gas. Buka Hasil pengamatan untuk melihat Gas terbentuk (mL).",
-    limitation: "Saat ini balon membaca data wadah, belum menampung gas secara fisik. Gambar balon juga belum membesar mengikuti jumlah gas.",
+    limitation: "Saat ini balon membaca data wadah dan membesar secara skematis, belum menampung gas secara fisik. Ukuran gambar bukan skala volume terkalibrasi.",
   },
 };

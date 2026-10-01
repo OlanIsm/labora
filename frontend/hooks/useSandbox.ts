@@ -15,7 +15,11 @@ export function useSandbox(discipline: Discipline) {
   const [speed, setSpeed] = useState(0);
   const [persistent, setPersistent] = useState(true);
   useEffect(() => {
-    dispatch({ type: "load", state: loadBench(discipline) });
+    const state = loadBench(discipline);
+    if (discipline === "chemistry") state.entities.forEach(entity => {
+      if (entity.material === "burner" && entity.label === "Pembakar virtual") entity.label = "Pembakar";
+    });
+    dispatch({ type: "load", state });
     setReady(true);
   }, [discipline]);
   const latest = useRef(history.present);

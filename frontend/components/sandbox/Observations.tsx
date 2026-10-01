@@ -4,6 +4,9 @@ import { materials } from "@/lib/sandbox/catalog";
 import { Shape } from "./Workbench";
 import { instrumentReadings } from "@/lib/sandbox/feedback";
 import { isLitmus, litmusExplanation } from "@/lib/sandbox/litmus";
+import { illustrativeTools } from "@/features/chemistry/equipmentGuides";
+import MeasurementGraph from "@/features/chemistry/MeasurementGraph";
+import { electrolysisIndicator } from "@/features/chemistry/ElectrolysisShape";
 export default function Observations({
   entity,
   state,
@@ -23,12 +26,18 @@ export default function Observations({
           materials[x.material]?.kind === "instrument",
       )
     : [];
-  const readings = Object.entries(entity?.measurements || {}).filter(([key]) => !paper && (
-    instrumentReadings[entity?.material || ""]
+  const illustrative = state.discipline === "chemistry" && entity && illustrativeTools.includes(entity.material);
+  const heating = state.discipline === "chemistry" && entity && state.entities.some(e => entity.connections.includes(e.id) && ["burner", "heater"].includes(e.material));
+  const cell = state.discipline === "chemistry" && entity?.material === "electrolysis" ? electrolysisIndicator(entity, state) : undefined;
+  const observed = cell?.vessel || entity;
+  const readings = Object.entries((cell ? cell.vessel?.measurements : entity?.measurements) || {}).filter(([key]) => !paper && !illustrative && (
+    cell ? cell.copper ? key.startsWith("Cu ") : key.startsWith("H₂") || key.startsWith("O₂") : instrumentReadings[entity?.material || ""]
       ? instrumentReadings[entity!.material].includes(key)
       : !container ||
         key === "Volume (mL)" ||
-        key === "Gas terbentuk (mL)" ||
+          key === "Gas terbentuk (mL)" ||
+          (state.discipline === "chemistry" && (key === "Pelarut menguap (mL)" || key === "Massa menguap (g)")) ||
+         (heating && key === "Suhu (°C)") ||
         meters.some(
           (m) =>
             (m.material === "ph-meter" && key === "pH") ||
@@ -68,6 +77,7 @@ export default function Observations({
           {!paper && entity.status && <strong className="sandbox-status">{entity.status}</strong>}
         </div>
       </div> : <p>Pilih alat atau wadah di meja untuk melihat hasilnya.</p>}
+      {cell && <p className="sandbox-small">{cell.vessel ? `Hasil elektrolisis pada ${cell.vessel.label}.` : "Sambungkan sel ke wadah, nyalakan sel, lalu jalankan waktu untuk melihat hasil elektrolisis."}</p>}
       {entity?.material === "microscope" && (
         <div className="sandbox-specimen-preview">
           <Shape entity={entity} state={state} magnified />
@@ -88,7 +98,7 @@ export default function Observations({
           <div key={label}>
             <dt>{label}</dt>
             <dd>
-              {Math.abs(value) >= 1e5
+              {Math.abs(value) >= 1e5 || (state.discipline === "chemistry" && value !== 0 && Math.abs(value) < .001)
                 ? value.toExponential(2)
                 : value.toLocaleString("id-ID", { maximumFractionDigits: 3 })}
             </dd>
@@ -103,14 +113,15 @@ export default function Observations({
               <div key={label}>
                 <dt>{label}</dt>
                 <dd>
-                  {value.toLocaleString("id-ID", { maximumFractionDigits: 3 })}
+                  {state.discipline === "chemistry" && value !== 0 && Math.abs(value) < .001 ? value.toExponential(2) : value.toLocaleString("id-ID", { maximumFractionDigits: 3 })}
                 </dd>
               </div>
             ))}
           </dl>
         </details>
       )}
-      {samples.length > 1 && (
+      {state.discipline === "chemistry" && observed && readings.length > 0 && <MeasurementGraph key={`${entity!.id}-${observed.id}`} state={state} entity={observed} readings={readings} />}
+      {state.discipline !== "chemistry" && samples.length > 1 && (
         <details>
           <summary>Lihat grafik perubahan</summary>
           <figure>

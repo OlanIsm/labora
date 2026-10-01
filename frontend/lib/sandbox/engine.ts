@@ -6,6 +6,7 @@ import { separate, vaporize } from "./separation";
 import { G, heatChange, equilibriumTemperature, mixtureHeatCapacity, totalMass, totalVolume } from "./measurements";
 import { emit, join, has } from "./simulation-utils";
 import { chemical, chromatography, testLitmus } from "../../features/chemistry/simulation";
+import { heatChemistryContainer } from "../../features/chemistry/heating";
 import { physics } from "../../features/physics/simulation";
 import { biology } from "../../features/biology/simulation";
 
@@ -28,14 +29,15 @@ function portion(id: string, amount: number): Portion {
   };
 }
 
-function evaluate(s: LabState, dt: number) {
+function evaluate(s: LabState, dt: number, advancingTime = false) {
   for (const e of s.entities) {
     const m = materials[e.material];
     if (!m) continue;
     if (e.active) e.params.time = (e.params.time || 0) + dt;
     if (m.kind === "container") {
       const heater = s.entities.find((x) => e.connections.includes(x.id) && ["burner", "heater"].includes(x.material) && x.active);
-      if (heater) e.temperature += heatChange(heater.params.power * dt, Math.max(1, totalMass(e)));
+      if (s.discipline === "chemistry") heatChemistryContainer(s, e, heater, dt, advancingTime);
+      else if (heater) e.temperature += heatChange(heater.params.power * dt, Math.max(1, totalMass(e)));
       else e.temperature += (s.environment.temperature - e.temperature) * (1 - Math.exp(-dt / 120));
       chemical(s, e, dt);
       // Shared containers also support the existing cross-subject experiments.
@@ -51,6 +53,10 @@ function evaluate(s: LabState, dt: number) {
     e.measurements["Suhu (°C)"] = e.temperature;
   }
   for (const instrument of s.entities.filter((e) => materials[e.material]?.kind === "instrument" || ["electrolyte-tester", "balloon", "stopwatch"].includes(e.material))) {
+    if (s.discipline === "chemistry" && instrument.material === "stopwatch") {
+      instrument.measurements = { "Waktu (s)": instrument.params.time || 0 };
+      continue;
+    }
     const target = s.entities.find((e) => instrument.connections.includes(e.id) && materials[e.material]?.kind !== "instrument");
     if (target) instrument.measurements = { ...target.measurements };
     else instrument.measurements = {};
@@ -84,13 +90,6 @@ export function reduceLab(state: LabState, action: Action): LabState {
   if (action.type === "move") {
     const e = find(action.id);
     if (e) {
-      if (isLitmus(e.material)) {
-        for (const id of e.connections) {
-          const vessel = find(id);
-          if (vessel) vessel.connections = vessel.connections.filter((id) => id !== e.id);
-        }
-        e.connections = [];
-      }
       e.x = Math.max(0, Math.min(100, finite(action.x)));
       e.y = Math.max(0, Math.min(100, finite(action.y)));
     }
@@ -103,6 +102,7 @@ export function reduceLab(state: LabState, action: Action): LabState {
     const e = find(action.id);
     if (e) {
       if (action.key === "temperature") e.temperature = Math.max(-20, Math.min(200, finite(action.value)));
+      else if (s.discipline === "chemistry" && e.material === "burner" && action.key === "targetTemperature") e.params.targetTemperature = Math.max(25, Math.min(200, finite(action.value, 120)));
       else e.params[action.key] = finite(action.value);
     }
   }
@@ -142,6 +142,7 @@ export function reduceLab(state: LabState, action: Action): LabState {
   if (action.type === "pour") {
     const source = find(action.source), target = find(action.target);
     if (source && target && source !== target) {
+      if (s.discipline === "chemistry" && (source.sealed || target.sealed)) return state;
       if (isLitmus(source.material) || isLitmus(target.material)) return state;
       const sourceMaterial = materials[source.material];
       const available = sourceMaterial.phase === "solid" ? totalMass(source) : totalVolume(source);
@@ -164,6 +165,10 @@ export function reduceLab(state: LabState, action: Action): LabState {
     const e = find(action.id);
     if (e) {
       const op = action.operation;
+      if (s.discipline === "chemistry" && e.sealed && ["filter", "decant", "distill", "evaporate", "magnet"].includes(op)) {
+        emit(s, e, "observation.unchanged", "Buka wadah sebelum memisahkan atau menguapkan campuran.");
+        return s;
+      }
       if (op === "stir") { e.params.stirred = 1; emit(s, e, "mixture.stirred", "Isi wadah diaduk."); }
       if (op === "launch") { e.active = true; e.params.time = 0; emit(s, e, "motion.started", "Gerakan dimulai."); }
       if (["filter", "decant", "distill", "magnet"].includes(op)) {
@@ -177,6 +182,10 @@ export function reduceLab(state: LabState, action: Action): LabState {
       }
       if (op === "evaporate") {
         const vapor = vaporize(e);
+        if (s.discipline === "chemistry" && vapor.length) {
+          e.measurements["Pelarut menguap (mL)"] = (e.measurements["Pelarut menguap (mL)"] || 0) + vapor.reduce((sum, p) => sum + p.volume, 0);
+          e.measurements["Massa menguap (g)"] = (e.measurements["Massa menguap (g)"] || 0) + vapor.reduce((sum, p) => sum + p.mass, 0);
+        }
         emit(s, e, vapor.length ? "solvent.evaporated" : "observation.unchanged", vapor.length ? "Pelarut menguap; zat terlarut tertinggal." : "Tidak ada penguapan teramati; periksa suhu dan pelarut.");
       }
       if (op === "measure") emit(s, e, "instrument.read", "Pembacaan alat diperbarui.");
@@ -186,9 +195,9 @@ export function reduceLab(state: LabState, action: Action): LabState {
     const dt = Math.min(5, positive(action.dt));
     // Keep numerical integration identical at 1×, 2× and 5× playback.
     const steps = Math.floor((dt + 1e-9) / 0.2);
-    for (let i = 0; i < steps; i++) { s.time += 0.2; evaluate(s, 0.2); }
+    for (let i = 0; i < steps; i++) { s.time += 0.2; evaluate(s, 0.2, true); }
     const remainder = dt - steps * 0.2;
-    if (remainder > 1e-9) { s.time += remainder; evaluate(s, remainder); }
+    if (remainder > 1e-9) { s.time += remainder; evaluate(s, remainder, true); }
     if (!s.samples.length || s.time - s.samples[s.samples.length - 1].time >= 1) {
       for (const e of s.entities.filter((e) => Object.keys(e.measurements).length)) {
         s.samples.push({ time: s.time, entity: e.id, values: { ...e.measurements } });

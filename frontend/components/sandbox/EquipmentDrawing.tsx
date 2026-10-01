@@ -52,6 +52,7 @@ export default function EquipmentDrawing({
   layerColor = "#ddb74e",
   hot = false,
   value,
+  animated = false,
 }: {
   material: Material;
   fill?: number;
@@ -64,6 +65,7 @@ export default function EquipmentDrawing({
   layerColor?: string;
   hot?: boolean;
   value?: number;
+  animated?: boolean;
 }) {
   const clip = useId();
   const id = material.id;
@@ -74,7 +76,9 @@ export default function EquipmentDrawing({
         <path d="M34 8H46M40 8V20M58 22L64 16" stroke={stroke} strokeWidth="4" fill="none" />
         <circle cx="40" cy="53" r="29" fill="#e7f4f8" stroke={stroke} strokeWidth="2.5" />
         <circle cx="40" cy="53" r="23" fill="#fff" stroke={stroke} />
-        <path d="M40 33V53L53 61M40 73V76M20 53H17M60 53H63" stroke={stroke} strokeWidth="2" fill="none" />
+        {value === undefined ? <path d="M40 33V53L53 61" stroke={stroke} strokeWidth="2" fill="none" /> : <path d="M40 53V33" transform={`rotate(${value * 6} 40 53)`} stroke={stroke} strokeWidth="2" fill="none" />}
+        <path d="M40 73V76M20 53H17M60 53H63" stroke={stroke} strokeWidth="2" fill="none" />
+        {value !== undefined && <text x="40" y="91" textAnchor="middle" fontSize="10" fill={stroke}>{value.toFixed(1)} s</text>}
         <circle cx="40" cy="53" r="3" fill={stroke} />
       </svg>
     );
@@ -332,7 +336,7 @@ export default function EquipmentDrawing({
     "watch-glass": "M10 65Q40 84 70 65Q40 72 10 65Z",
     aquarium: "M9 24H71V80H9Z",
   };
-  const vessel = material.kind === "container" || id === "burette";
+  const vessel = (material.kind === "container" && id !== "dropper") || id === "burette";
   if (vessel) {
     const outline = outlines[id] || outlines.beaker;
     return (
@@ -367,6 +371,7 @@ export default function EquipmentDrawing({
             [29, 39, 49].map((x, i) => (
               <circle
                 key={x}
+                className={animated ? "chemistry-bubble" : undefined}
                 cx={x}
                 cy={65 - i * 13}
                 r="2.5"
@@ -393,6 +398,7 @@ export default function EquipmentDrawing({
         {sealed && <path d="M28 7H52" stroke={stroke} strokeWidth="5" />}
         {hot && (
           <path
+            className={animated ? "chemistry-steam" : undefined}
             d="M23 13q-4 -4 0 -8M56 13q4 -4 0 -8"
             stroke={stroke}
             fill="none"
@@ -583,6 +589,7 @@ export default function EquipmentDrawing({
         />
         {fill > 0 && (
           <path
+            className={animated ? "chemistry-flame" : undefined}
             d="M40 37Q21 28 40 8Q59 28 40 37Z"
             fill="#5ec8ff"
             stroke={stroke}

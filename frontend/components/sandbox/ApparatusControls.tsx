@@ -4,7 +4,9 @@ import { materials } from "@/lib/sandbox/catalog";
 import { totalMass, totalVolume } from "@/lib/sandbox/measurements";
 import { isLitmus } from "@/lib/sandbox/litmus";
 import LitmusControls from "@/features/chemistry/LitmusControls";
+import StopwatchControls from "@/features/chemistry/StopwatchControls";
 import { chemistryFields } from "@/features/chemistry/controlFields";
+import { illustrativeTools } from "@/features/chemistry/equipmentGuides";
 import { physicsFields } from "@/features/physics/controlFields";
 import { biologyFields } from "@/features/biology/controlFields";
 const fields = { ...chemistryFields, ...physicsFields, ...biologyFields };
@@ -15,6 +17,8 @@ export default function ApparatusControls({
   target,
   setTarget,
   onAction,
+  playing = false,
+  onRun,
 }: {
   entity?: Entity;
   state: LabState;
@@ -22,6 +26,8 @@ export default function ApparatusControls({
   target: string;
   setTarget: (id: string) => void;
   onAction: (type: string) => void;
+  playing?: boolean;
+  onRun?: () => void;
 }) {
   if (!e)
     return (
@@ -46,6 +52,14 @@ export default function ApparatusControls({
   }
   if (isLitmus(e.material)) {
     return <LitmusControls entity={e} state={state} target={target} setTarget={setTarget} send={send} />;
+  }
+  if (state.discipline === "chemistry" && e.material === "stopwatch") return <StopwatchControls entity={e} send={send} playing={playing} onRun={onRun} />;
+  if (state.discipline === "chemistry" && illustrativeTools.includes(e.material)) {
+    return <section id="sandbox-controls" className="sandbox-controls">
+      <h2>{e.label}</h2>
+      <p className="sandbox-small">Alat ilustratif. Bisa dipindahkan, tetapi belum menjalankan proses atau menopang wadah di simulasi ini.</p>
+      <button onClick={() => send({ type: "remove", id: e.id })}>Kembalikan ke rak</button>
+    </section>;
   }
   return (
     <section id="sandbox-controls" className="sandbox-controls">
@@ -80,6 +94,11 @@ export default function ApparatusControls({
           </button>
         )}
       </div>
+      {state.discipline === "chemistry" && e.material === "burner" && <label className="sandbox-field">
+        Suhu target (°C)
+        <input type="number" min="25" max="200" step="1" value={e.params.targetTemperature ?? 120} onChange={event => send({ type: "set", id: e.id, key: "targetTemperature", value: +event.target.value })} />
+        <small>Batas suhu wadah pada model, bukan suhu nyala api. Cairan mendidih memakai kalor untuk menguap.</small>
+      </label>}
       {canTransfer && (
         <label className="sandbox-field">
           Jumlah bahan ({unit})
@@ -177,7 +196,7 @@ export default function ApparatusControls({
             ))}
           </div>
           <p className="sandbox-small">
-            Pemisahan memindahkan fraksi ke wadah penerima yang tersambung.
+            {state.discipline === "chemistry" ? "Saring, Dekantasi, Distilasi, dan Pisahkan magnet membutuhkan wadah penerima tersambung. Uapkan memproses satu fraksi pelarut saat mencapai titik didih; pemanasan sambil waktu berjalan menguapkan pelarut bertahap secara otomatis." : "Pemisahan memindahkan fraksi ke wadah penerima yang tersambung."}
           </p>
         </details>
       )}

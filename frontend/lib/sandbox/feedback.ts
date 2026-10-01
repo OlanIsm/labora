@@ -30,7 +30,7 @@ export const instrumentReadings: Record<string, string[]> = {
   stopwatch: ["Waktu (s)"],
 };
 export function measurementFeedback(entity: Entity): string {
-  if (!entity.connections.length) return "";
+  if (!entity.connections.length && entity.material !== "stopwatch") return "";
   const values = entity.measurements;
   if (entity.material === "ph-meter" && values.pH !== undefined) {
     const type =
@@ -135,6 +135,7 @@ export function actionFeedback(
         "Pilih benda sumber dan tujuan yang berbeda.",
         "Pilih wadah lain sebagai tujuan.",
       );
+    if (before.discipline === "chemistry" && (source.sealed || target.sealed)) return result("Belum ada bahan yang dituang.", "Wadah sumber atau tujuan masih tertutup.", "Pilih wadah yang tertutup, lalu tekan Buka wadah.");
     const moved =
       source.contents.reduce((sum, p) => sum + p.mass, 0) -
       (after.entities
@@ -213,6 +214,7 @@ export function actionFeedback(
   if (action.type === "set" && entity) {
     const names: Record<string, string> = {
       temperature: "Suhu",
+      targetTemperature: "Suhu target",
       amount: "Jumlah bahan",
       length: "Panjang",
       mass: "Massa",

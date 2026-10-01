@@ -8,6 +8,14 @@ import { Shape } from "./Shape";
 export { Shape } from "./Shape";
 import { RACK_SLOTS } from "@/lib/sandbox/rack";
 import { canDipLitmus, isLitmus } from "@/lib/sandbox/litmus";
+import ChemistryConnections from "@/features/chemistry/Connections";
+import { X } from "lucide-react";
+import HoverReading from "@/features/chemistry/HoverReading";
+
+function ReturnToRack({ entity, dispatch }: { entity: Entity; dispatch: (action: Action) => void }) {
+  return <button type="button" className="chemistry-return-object" aria-label={`Kembalikan ${entity.label} ke rak`} title="Kembalikan ke rak"
+    onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); dispatch({ type: "remove", id: entity.id }); }}><span><X size={16} aria-hidden="true" /></span></button>;
+}
 
 function BenchItem({
   entity,
@@ -38,7 +46,7 @@ function BenchItem({
     data: { container: entity.id },
     disabled: !canPour,
   });
-  return (
+  const item = (
     <button
       id={`sandbox-entity-${entity.id}`}
       ref={(node) => { setNodeRef(node); setDropRef(node); }}
@@ -47,6 +55,8 @@ function BenchItem({
       onClick={onSelect}
       aria-label={`${entity.label}. Pilih untuk mengatur.`}
       aria-pressed={selected}
+      data-label-edge={state.discipline === "chemistry" && !docked ? entity.x < 15 ? "left" : entity.x > 70 ? "right" : undefined : undefined}
+      data-reading-edge={state.discipline === "chemistry" && entity.y > 65 ? "above" : undefined}
       onKeyDown={(event) => {
         const direction: Record<string, [number, number]> = {
           ArrowLeft: [-4, 0],
@@ -66,22 +76,28 @@ function BenchItem({
       }}
       className={`sandbox-object ${docked ? "rack-tube" : ""} ${selected ? "selected" : ""} ${isDragging ? "dragging" : ""} ${canPour ? "pour-ready" : ""} ${isOver ? "pour-over" : ""}`}
       style={{
-        left: docked ? 0 : `${entity.x}%`,
-        top: docked ? 0 : `${entity.y}%`,
-        transform: transform
+        left: state.discipline === "chemistry" || docked ? 0 : `${entity.x}%`,
+        top: state.discipline === "chemistry" || docked ? 0 : `${entity.y}%`,
+        transform: transform && state.discipline !== "chemistry"
           ? `translate3d(${transform.x}px,${transform.y}px,0)`
           : undefined,
       }}
     >
       <Shape entity={entity} state={state} />
+      {state.discipline === "chemistry" && <HoverReading entity={entity} state={state} />}
+      {state.discipline === "chemistry" && entity.material === "stopwatch" && <output className="chemistry-object-reading" aria-label="Waktu stopwatch">{(entity.measurements["Waktu (s)"] || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s</output>}
       <span>{entity.label}</span>
-      {isOver && <small>{testingPaper ? "Lepas untuk mencelupkan" : "Lepas untuk menuang"}</small>}
+      {isOver && <small className="sandbox-drop-hint">{testingPaper ? "Lepas untuk mencelupkan" : "Lepas untuk menuang"}</small>}
       {materials[entity.material]?.kind === "container" && entity.contents.some((p) => p.mass > 1e-8) && (
         <small>{entity.contents.filter((p) => p.mass > 1e-8).map((p) => materials[p.material]?.name).join(" + ")}</small>
       )}
       {entity.status && <small>{entity.status}</small>}
     </button>
   );
+  if (state.discipline !== "chemistry") return item;
+  return <div className={`chemistry-bench-item ${docked ? "chemistry-docked-item" : ""}`} style={{ left: docked ? 0 : `${entity.x}%`, top: docked ? 0 : `${entity.y}%`, transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined }}>
+    {item}{selected && !isDragging && <ReturnToRack entity={entity} dispatch={dispatch} />}
+  </div>;
 }
 function RackSlot({ rack, slot, state, selected, dispatch, onSelect, onPlaceTube }: {
   rack: Entity;
@@ -148,6 +164,7 @@ function TestTubeRack({ rack, state, selected, dispatch, onSelect, onPlaceTube }
           event.preventDefault();
           dispatch({ type: "move", id: rack.id, x: rack.x + delta[event.key][0], y: rack.y + delta[event.key][1] });
         }}>{rack.label}</button>
+      {state.discipline === "chemistry" && selected === rack.id && !isDragging && <ReturnToRack entity={rack} dispatch={dispatch} />}
     </div>
   );
 }
@@ -157,12 +174,14 @@ export default function Workbench({
   onSelect,
   dispatch,
   onPlaceTube,
+  expanded = false,
 }: {
   state: LabState;
   selected: string;
   onSelect: (id: string) => void;
   dispatch: (a: Action) => void;
   onPlaceTube: (rack: string, slot: number, source: { entity: string } | { material: string }) => void;
+  expanded?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: "bench" });
   const firstTool =
@@ -175,10 +194,10 @@ export default function Workbench({
     <div
       ref={setNodeRef}
       id="sandbox-bench"
-      className={`sandbox-bench ${isOver ? "drop-over" : ""}`}
+      className={`sandbox-bench ${isOver ? "drop-over" : ""} ${state.discipline === "chemistry" && expanded ? "chemistry-bench-expanded" : ""}`}
       aria-label="Meja eksperimen bebas"
     >
-      <svg
+      {state.discipline === "chemistry" ? <ChemistryConnections state={state} dispatch={dispatch} /> : <svg
         className="sandbox-connections"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
@@ -202,7 +221,7 @@ export default function Workbench({
               ) : null;
             }),
         )}
-      </svg>
+      </svg>}
       {!state.entities.length && (
         <div className="sandbox-bench-empty">
           <EquipmentDrawing material={materials[firstTool]} />
