@@ -1,0 +1,21 @@
+.sandbox-microscope i {background:#e1edc9;}
+.sandbox-microscope i:after {opacity:0;}
+.sandbox-microscope.detail-visible i:after {opacity:1;}
+.sandbox-microscope.specimen-animal i {border-radius:45%;background:#eacbdf;border-color:#a978a1;}
+.sandbox-microscope.specimen-blood i {border-radius:50%;background:#efbaca;border-color:#b65b76;}
+.sandbox-microscope.specimen-blood i:after {display:none;}
+.sandbox-microscope.specimen-blood i:first-child {background:#ece3f4;border-color:#937bb0;}
+.sandbox-microscope.specimen-blood.detail-visible i:first-child:after {display:block;}
+.sandbox-microscope.specimen-blood i:last-child {width:7px;height:7px;border-width:1px;background:#9676aa;}
+.sandbox-microscope.specimen-yeast i {border-radius:50%;background:#e2dcc5;border-color:#958951;position:relative;}
+.sandbox-microscope.specimen-yeast i:after {background:#e2dcc5;border:1px solid #958951;width:9px;height:9px;top:-5px;left:9px;}
+.sandbox-microscope.specimen-ciliate i {border-radius:45%;width:32px;height:18px;border-style:dashed;background:#d4e1ea;border-color:#667e95;}
+.sandbox-microscope.specimen-stomata i {border-radius:50% 35% 35% 50%;width:12px;height:27px;background:#8bbc7e;}
+.sandbox-microscope.specimen-stomata i:nth-child(even) {transform:scaleX(-1);}
+.sandbox-microscope.sample-elodea i:after {background:#3d7931;box-shadow:4px 3px #3d7931,-3px -4px #3d7931;}
+.sandbox-microscope.detail-visible.specimen-plant i:before {content:'';position:absolute;inset:3px;border:1px solid #aabd98;border-radius:3px;}
+.sandbox-specimen-preview {margin:24px 0;display:flex;flex-direction:column;align-items:center;gap:14px;}
+.sandbox-specimen-preview .sandbox-microscope {width:210px;height:210px;}
+.sandbox-specimen-preview .sandbox-microscope i {width:40px;height:58px;}
+.sandbox-specimen-preview .sandbox-microscope i:after {width:10px;height:10px;top:22px;left:15px;}
+.sandbox-specimen-preview small {max-width:40ch;text-align:center;color:var(--muted);}

@@ -1,5 +1,26 @@
+# Dependencies and generated files
 node_modules/
 .next/
-.env.local
-.impeccable/review/
+/frontend/out/
+coverage/
 *.tsbuildinfo
+
+# Local environment files; keep configuration examples
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs and generated review artifacts
+*.log
+.impeccable/
+
+# Markdown documentation
+*.md
+
+# Operating system and editor temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo

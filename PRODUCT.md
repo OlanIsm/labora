@@ -12,7 +12,7 @@ Next.js, TypeScript, React, CSS, dnd-kit, optional Supabase. Chosen from the use
 
 ## Users
 
-Students with limited access to physical science laboratories; teachers preparing guided science activities.
+Indonesian-speaking SMP and SMA students with limited access to physical science laboratories; teachers preparing guided science activities.
 
 ## Product Purpose
 
