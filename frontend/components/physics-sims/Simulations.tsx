@@ -1,16 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 
 const loading = () => <p role="status">Memuat simulasi...</p>;
 
 export const physicsSimulations = [
-  { id: "meriam-target", title: "Meriam & Target", description: "Gerak parabola dengan hambatan udara dan pilihan planet.", badge: "SMA Kelas 10", component: dynamic(() => import("./projectile/ProjectilePage"), { ssr: false, loading }) },
-  { id: "roller-coaster", title: "Roller Coaster Maker", description: "Gambar lintasanmu sendiri dan amati kekekalan energi.", badge: "SMP 8 · SMA 10", component: dynamic(() => import("./roller-coaster/RollerCoasterPage"), { ssr: false, loading }) },
-  { id: "kapal-selam", title: "Lab Kapal Selam", description: "Hukum Archimedes dan tekanan hidrostatik.", badge: "SMP 8 · SMA 11", component: dynamic(() => import("./submarine/SubmarinePage"), { ssr: false, loading }) },
-  { id: "laser-lensa", title: "Sandbox Laser & Lensa", description: "Pemantulan, pembiasan, dan pembentukan bayangan.", badge: "SMP 8 · SMA 11", component: dynamic(() => import("./optics/OpticsPage"), { ssr: false, loading }) },
-  { id: "korsleting-listrik", title: "Simulator Korsleting Listrik", description: "Rangkaian dinamis dengan deteksi korsleting dan sekring.", badge: "SMP 9 · SMA 12", component: dynamic(() => import("./circuit/CircuitPage"), { ssr: false, loading }) },
+  { id: "meriam-target", title: "Meriam & Target", description: "Gerak parabola dengan hambatan udara dan pilihan planet.", component: dynamic(() => import("./projectile/ProjectilePage"), { ssr: false, loading }) },
+  { id: "roller-coaster", title: "Roller Coaster Maker", description: "Gambar lintasanmu sendiri dan amati kekekalan energi.", component: dynamic(() => import("./roller-coaster/RollerCoasterPage"), { ssr: false, loading }) },
+  { id: "kapal-selam", title: "Lab Kapal Selam", description: "Hukum Archimedes dan tekanan hidrostatik.", component: dynamic(() => import("./submarine/SubmarinePage"), { ssr: false, loading }) },
+  { id: "laser-lensa", title: "Sandbox Laser & Lensa", description: "Pemantulan, pembiasan, dan pembentukan bayangan.", component: dynamic(() => import("./optics/OpticsPage"), { ssr: false, loading }) },
+  { id: "korsleting-listrik", title: "Rangkaian Seri & Paralel", description: "Susun komponen dan kabelmu sendiri. Bandingkan arus dan terang lampu.", component: dynamic(() => import("./circuit/CircuitPage"), { ssr: false, loading }) },
 ];
 
 export function PhysicsSimulationList() {
@@ -23,13 +24,24 @@ export function PhysicsSimulationList() {
       <div className="sim-fisika-list">
         {physicsSimulations.map((sim) => (
           <Link key={sim.id} href={`/fisika/${sim.id}`} className="sim-fisika-card">
-            <span className="sim-badge">{sim.badge}</span>
-            <h3>{sim.title}</h3>
-            <p>{sim.description}</p>
+            <div className="sim-fisika-preview">
+              <Image
+                className="sim-fisika-thumbnail"
+                src={`/physics-previews/${sim.id}.webp`}
+                alt=""
+                fill
+                unoptimized
+                sizes="(max-width: 650px) 100vw, (max-width: 1150px) 50vw, 33vw"
+              />
+            </div>
+            <div className="sim-fisika-card-body">
+              <h3>{sim.title}</h3>
+              <p>{sim.description}</p>
+              <span className="sim-fisika-card-action">Buka simulasi</span>
+            </div>
           </Link>
         ))}
       </div>
-      <Link href="/sandbox/physics" className="back-link">Buka meja bebas Fisika</Link>
     </>
   );
 }

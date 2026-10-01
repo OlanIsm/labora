@@ -1,298 +1,173 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DndContext, DragEndEvent, PointerSensor, pointerWithin, useSensor, useSensors } from "@dnd-kit/core";
 import SimShell from "../shared/SimShell";
 import CircuitCanvas, { CircuitRenderState } from "./CircuitCanvas";
 import CircuitControls, { CircuitControlsState } from "./CircuitControls";
 import EllieMascot from "../shared/EllieMascot";
 import QuizPanel from "../shared/QuizPanel";
-import { useCoachSteps, CoachStep } from "../../../lib/physics-sims/shared/coachSteps";
 import { playNoiseBurst, playTone } from "../../../lib/physics-sims/shared/audio";
-import {
-  lampBrightness,
-  shouldFuseBlow,
-  shouldLampBurnOut,
-  solveCircuit,
-} from "../../../lib/physics-sims/circuit/engine";
-import {
-  assignNodes,
-  CIRCUIT_PRESETS,
-  PlacedComponent,
-  toElectricalComponents,
-} from "../../../lib/physics-sims/circuit/presets";
-
-type CoachState = {
-  selectedComponent: boolean;
-  showMeters: boolean;
-  shortCircuitSelected: boolean;
-  fuseBlown: boolean;
-};
-
-const COACH_STEPS: CoachStep<CoachState>[] = [
-  {
-    id: "intro",
-    message: () =>
-      "Hai, aku Ellie! Klik lampu atau saklar pada rangkaian untuk melihat arus dan dayanya di panel kanan.",
-    isDone: (state) => state.selectedComponent,
-  },
-  {
-    id: "meters",
-    message: () =>
-      "Bagus! Centang \"Tampilkan voltmeter/amperemeter\" agar semua nilai arus dan daya terlihat sekaligus.",
-    isDone: (state) => state.showMeters,
-  },
-  {
-    id: "short",
-    message: () =>
-      "Sekarang pilih \"Demo korsleting\". Perhatikan arus melonjak karena kabel menghubungkan kutub baterai dengan hambatan hampir nol.",
-    isDone: (state) => state.shortCircuitSelected,
-  },
-  {
-    id: "fuse",
-    message: (state) =>
-      state.fuseBlown
-        ? "Sekring putus dan membuka rangkaian. Arus berhenti: itulah fungsi pengaman sekring."
-        : "Lihat sekringnya: jika arus melebihi rating 5 A, sekring akan putus dan memutus rangkaian.",
-    isDone: (state) => state.fuseBlown,
-  },
-  {
-    id: "done",
-    message: () =>
-      "Eksperimen selesai! Klik sekring yang putus lalu pilih \"Ganti Komponen\" untuk mengulanginya.",
-    isDone: () => true,
-  },
-];
+import { ComponentKind, lampBrightness, shouldFuseBlow, shouldLampBurnOut, solveCircuit } from "../../../lib/physics-sims/circuit/engine";
+import { assignNodes, CIRCUIT_PRESETS, GridPoint, PlacedComponent, toElectricalComponents } from "../../../lib/physics-sims/circuit/presets";
+import { CIRCUIT_CELL, CIRCUIT_HEIGHT, CIRCUIT_MARGIN, CIRCUIT_WIDTH, COMPONENT_NAMES, connectPoints, createComponent, moveComponent, rotateComponent, samePoint, snapPoint } from "../../../lib/physics-sims/circuit/editor";
 
 const QUIZ_QUESTIONS = [
-  {
-    prompt: "Mengapa arus menjadi sangat besar saat terjadi korsleting?",
-    options: [
-      "Tegangan baterai hilang",
-      "Hambatan jalur menjadi sangat kecil",
-      "Sekring menambah energi",
-      "Lampu menghasilkan arus",
-    ],
-    answer: 1,
-    explanation:
-      "Menurut I = V/R, pada tegangan yang sama arus membesar ketika hambatan R mendekati nol.",
-  },
-  {
-    prompt: "Apa fungsi sekring pada rangkaian?",
-    options: [
-      "Menaikkan tegangan",
-      "Membuat lampu lebih terang",
-      "Memutus rangkaian saat arus melewati batas aman",
-      "Menyimpan muatan listrik",
-    ],
-    answer: 2,
-    explanation:
-      "Sekring meleleh atau putus ketika arus melampaui rating-nya, sehingga rangkaian terbuka dan arus berhenti.",
-  },
-  {
-    prompt: "Dua resistor dipasang paralel. Bagaimana hambatan penggantinya dibanding masing-masing resistor?",
-    options: [
-      "Lebih besar dari keduanya",
-      "Sama dengan resistor terbesar",
-      "Lebih kecil dari resistor terkecil",
-      "Selalu nol",
-    ],
-    answer: 2,
-    explanation:
-      "Cabang paralel menyediakan lebih banyak jalur arus, sehingga hambatan penggantinya lebih kecil dari setiap hambatan cabang.",
-  },
+  { prompt: "Dua lampu dipasang seri. Bagaimana arus yang melewati kedua lampu?", options: ["Sama besar", "Lampu pertama selalu lebih besar", "Lampu kedua selalu lebih besar", "Tidak ada arus"], answer: 0,
+    explanation: "Rangkaian seri hanya memiliki satu jalur, sehingga arus yang melewati setiap komponen sama." },
+  { prompt: "Dua lampu dipasang paralel pada baterai. Bagaimana tegangan pada setiap cabang?", options: ["Dibagi dua", "Sama dengan tegangan sumber", "Selalu nol", "Bergantung pada jumlah kabel"], answer: 1,
+    explanation: "Setiap cabang paralel terhubung ke dua simpul yang sama, sehingga beda tegangannya sama (hambatan kabel diabaikan)." },
+  { prompt: "Jika satu lampu dilepas dari rangkaian paralel, apa yang terjadi pada lampu di cabang lain?", options: ["Ikut padam", "Tetap menyala", "Selalu putus", "Tegangan menjadi nol"], answer: 1,
+    explanation: "Cabang lain masih memiliki jalur tertutup menuju baterai. Pada rangkaian seri, melepas satu lampu justru memutus satu-satunya jalur." },
 ];
 
-const INITIAL_CONTROLS: CircuitControlsState = {
-  presetId: CIRCUIT_PRESETS[0].id,
-  showMeters: false,
-};
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(query.matches);
-    const listener = (event: MediaQueryListEvent) => setReduced(event.matches);
-    query.addEventListener("change", listener);
-    return () => query.removeEventListener("change", listener);
-  }, []);
-  return reduced;
-}
-
 function clonePreset(id: string): PlacedComponent[] {
-  const preset = CIRCUIT_PRESETS.find((p) => p.id === id) ?? CIRCUIT_PRESETS[0];
-  return preset.components.map((c) => ({ ...c }));
+  return (CIRCUIT_PRESETS.find(p => p.id === id)?.components || []).map(c => ({ ...c, from: { ...c.from }, to: { ...c.to } }));
 }
 
 export default function CircuitPage() {
-  const [controls, setControls] = useState(INITIAL_CONTROLS);
-  const [components, setComponents] = useState<PlacedComponent[]>(() => clonePreset(INITIAL_CONTROLS.presetId));
+  const [controls, setControls] = useState<CircuitControlsState>({ presetId: "empty", showMeters: false });
+  const [components, setComponents] = useState<PlacedComponent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [overloadedId, setOverloadedId] = useState<string | null>(null);
-  const reducedMotion = usePrefersReducedMotion();
-  const coach = useCoachSteps(COACH_STEPS);
-
-  const solution = useMemo(() => {
-    if (paused) return null;
-    const { nodeCount } = assignNodes(components);
-    const electrical = toElectricalComponents(components);
-    return solveCircuit(electrical, nodeCount);
-  }, [components, paused]);
-
-  // Detect overloads after every solve: if a fuse should blow or a lamp
-  // should burn out given the just-solved currents/power, apply that state
-  // change (triggering a re-solve next render) and play the matching
-  // sound/flash effect once.
+  const [wireMode, setWireMode] = useState(false);
+  const [wireStart, setWireStart] = useState<GridPoint | null>(null);
+  const [message, setMessage] = useState("");
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const nextId = useRef(0);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   useEffect(() => {
-    if (!solution) return;
-    for (const component of components) {
-      if (component.kind === "fuse" && !component.blown) {
-        const current = solution.branchCurrents[component.id] || 0;
-        if (shouldFuseBlow({ ...component } as never, current)) {
-          setComponents((prev) => prev.map((c) => (c.id === component.id ? { ...c, blown: true } : c)));
-          setOverloadedId(component.id);
-          playNoiseBurst(muted, 0.3, 0.3);
-          return;
-        }
-      }
-      if (component.kind === "lamp" && !component.burnedOut) {
-        const power = solution.branchPower[component.id] || 0;
-        if (shouldLampBurnOut({ ...component } as never, power)) {
-          setComponents((prev) => prev.map((c) => (c.id === component.id ? { ...c, burnedOut: true } : c)));
-          setOverloadedId(component.id);
-          playTone(muted, { frequency: 100, duration: 0.3, type: "sawtooth" });
-          return;
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solution]);
-
-  const handlePresetChange = useCallback((presetId: string) => {
-    setComponents(clonePreset(presetId));
-    setSelectedId(null);
-    setOverloadedId(null);
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
   }, []);
 
-  const handleReset = useCallback(() => {
-    setComponents(clonePreset(controls.presetId));
-    setSelectedId(null);
-    setOverloadedId(null);
-    coach.reset();
-  }, [coach, controls.presetId]);
+  const electrical = useMemo(() => toElectricalComponents(components), [components]);
+  const solution = useMemo(() => paused ? null : solveCircuit(electrical, assignNodes(components).nodeCount), [components, electrical, paused]);
+  useEffect(() => {
+    if (!solution) return;
+    const broken = electrical.find(c => shouldFuseBlow(c, solution.branchCurrents[c.id] || 0)) ||
+      electrical.find(c => shouldLampBurnOut(c, solution.branchPower[c.id] || 0));
+    if (!broken) return;
+    setComponents(prev => prev.map(c => c.id === broken.id ? { ...c, ...(c.kind === "fuse" ? { blown: true } : { burnedOut: true }) } : c));
+    setOverloadedId(broken.id);
+    setMessage(`${COMPONENT_NAMES[broken.kind]} ${broken.id} putus karena kelebihan ${broken.kind === "fuse" ? "arus" : "daya"}. Pilih komponen untuk menggantinya.`);
+    playNoiseBurst(muted, 0.2, 0.15);
+  }, [electrical, solution, muted]);
 
-  const handleToggleSwitch = useCallback((id: string) => {
-    setComponents((prev) => prev.map((c) => (c.id === id ? { ...c, closed: !c.closed } : c)));
-    playTone(muted, { frequency: 500, duration: 0.08, type: "square" });
-  }, [muted]);
-
-  const handleReplaceComponent = useCallback((id: string) => {
-    setComponents((prev) => prev.map((c) => (c.id === id ? { ...c, blown: false, burnedOut: false } : c)));
-    setOverloadedId(null);
-    playTone(muted, { frequency: 600, duration: 0.15, type: "sine" });
-  }, [muted]);
-
-  const currents = solution?.branchCurrents || {};
-  const brightness: Record<string, number> = {};
-  for (const component of components) {
-    if (component.kind === "lamp") {
-      brightness[component.id] = lampBrightness({ ...component } as never, solution?.branchPower[component.id] || 0);
+  function markCustom() { setControls(prev => ({ ...prev, presetId: "custom" })); }
+  function select(id: string | null) { setSelectedId(id); setWireMode(false); setWireStart(null); }
+  function add(kind: ComponentKind, point?: GridPoint) {
+    if (kind === "battery" && components.some(c => c.kind === "battery")) { setMessage("Satu baterai cukup untuk rangkaian ini. Ubah tegangan baterai yang sudah ada."); return; }
+    if (kind === "wire" && !point) { setWireMode(true); setWireStart(null); setMessage("Klik terminal awal, lalu terminal tujuan untuk membuat kabel. Klik titik meja untuk membuat belokan."); return; }
+    if (!point) {
+      const candidates = [1, 3, 5, 0, 2, 4].flatMap(row => [1, 4, 6].map(col => ({ col, row })));
+      point = candidates.find(p => !components.some(c => c.kind !== "wire" && (c.from.col + c.to.col) / 2 === p.col + 1 && (c.from.row + c.to.row) / 2 === p.row));
+      if (!point) { setMessage("Rak sudah memenuhi meja. Pindahkan atau hapus komponen untuk memberi ruang."); return; }
     }
+    const component = createComponent(kind, `${kind}-${++nextId.current}`, point);
+    setComponents(prev => [...prev, component]);
+    select(component.id);
+    markCustom();
+    setMessage(`${COMPONENT_NAMES[kind]} ditambahkan. Seret untuk memindahkan, atau klik kedua terminal untuk menyambungkan kabel.`);
   }
-
+  function drop(event: DragEndEvent) {
+    if (event.over?.id !== "circuit-board") return;
+    const rect = document.querySelector(".circuit-board")?.getBoundingClientRect();
+    const item = event.active.rect.current.translated;
+    const kind = event.active.data.current?.kind as ComponentKind | undefined;
+    if (!rect || !item || !kind) return;
+    const point = snapPoint(((item.left + item.width / 2 - rect.left) / rect.width * CIRCUIT_WIDTH - CIRCUIT_MARGIN) / CIRCUIT_CELL - 1,
+      ((item.top + item.height / 2 - rect.top) / rect.height * CIRCUIT_HEIGHT - CIRCUIT_MARGIN) / CIRCUIT_CELL);
+    add(kind, point);
+  }
+  function terminal(point: GridPoint) {
+    setWireMode(true);
+    if (!wireStart) { setWireStart(point); setMessage("Terminal awal dipilih. Klik terminal tujuan, atau tekan Batal kabel."); return; }
+    if (samePoint(wireStart, point)) { setWireStart(null); setMessage("Sambungan dibatalkan."); return; }
+    const next = connectPoints(components, `wire-${++nextId.current}`, wireStart, point);
+    setComponents(next);
+    setWireStart(null);
+    markCustom();
+    setMessage(next === components ? "Kedua terminal ini sudah terhubung kabel." : "Kabel tersambung. Kamu bisa membuat kabel berikutnya atau kembali ke Pindahkan.");
+  }
+  function move(id: string, dc: number, dr: number) {
+    if (!dc && !dr) return;
+    setComponents(prev => moveComponent(prev, id, dc, dr));
+    setWireStart(null);
+    markCustom();
+  }
+  function remove(id: string) {
+    setComponents(prev => prev.filter(c => c.id !== id));
+    select(null);
+    markCustom();
+    setMessage("Komponen dihapus. Kabel lainnya tetap ada dan bisa dipilih untuk dihapus.");
+  }
+  function load(presetId: string) {
+    if (controls.presetId === "custom" && components.length && !window.confirm("Ganti rangkaian? Susunan buatanmu saat ini akan diganti.")) return;
+    setComponents(clonePreset(presetId));
+    select(null);
+    setOverloadedId(null);
+    setPaused(false);
+    setMessage(presetId === "empty" ? "Meja dikosongkan. Tambahkan baterai untuk mulai." : "Contoh dimuat. Semua komponen dan kabel bisa kamu ubah.");
+    setControls(prev => ({ ...prev, presetId }));
+  }
+  function update(id: string, values: Partial<PlacedComponent>) {
+    setComponents(prev => prev.map(c => c.id === id ? { ...c, ...values } : c));
+    markCustom();
+  }
+  const battery = components.find(c => c.kind === "battery");
+  const current = solution?.branchCurrents[battery?.id || ""] || 0;
+  const status = paused ? "Simulasi dijeda" : !battery ? "Tambahkan baterai" : Math.abs(current) < 1e-6 ? "Rangkaian terbuka" : Math.abs(current) > 100 ? "Korsleting: hambatan terlalu kecil" : "Arus mengalir";
+  const selected = components.find(c => c.id === selectedId) || null;
+  const selectedElectrical = electrical.find(c => c.id === selectedId);
+  const selectedVoltage = solution && selectedElectrical ? Math.abs((solution.nodeVoltages[selectedElectrical.nodeA] || 0) - (solution.nodeVoltages[selectedElectrical.nodeB] || 0)) : null;
   const canvasState: CircuitRenderState = {
-    components,
-    currents,
-    brightness,
-    overloadedId,
-    reducedMotion,
+    components, currents: solution?.branchCurrents || {}, overloadedId, reducedMotion,
+    brightness: Object.fromEntries(electrical.filter(c => c.kind === "lamp").map(c => [c.id, lampBrightness(c, solution?.branchPower[c.id] || 0)])),
   };
+  const guide = !components.length ? "Hai, aku Ellie! Ambil baterai dan dua lampu dari rak. Klik terminal awal dan tujuan untuk menyambungkan kabel. Kamu bisa mulai dari contoh seri atau paralel juga."
+    : wireStart ? "Titik kuning adalah awal kabelmu. Pilih terminal tujuan. Kabel hanya tersambung pada titik terminal, bukan saat garisnya sekadar berpotongan."
+      : "Pada rangkaian seri, arus melalui kedua lampu sama. Pada paralel, tegangan kedua cabang sama. Coba ubah hambatan atau lepas satu lampu, lalu bandingkan hasilnya.";
 
-  const selectedComponent = components.find((c) => c.id === selectedId) || null;
-  const selectedCurrent = selectedComponent ? currents[selectedComponent.id] ?? null : null;
-  const selectedPower = selectedComponent ? solution?.branchPower[selectedComponent.id] ?? null : null;
-
-  const coachState: CoachState = {
-    selectedComponent: !!selectedComponent,
-    showMeters: controls.showMeters,
-    shortCircuitSelected: controls.presetId === "shortCircuit",
-    fuseBlown: components.some((component) => component.kind === "fuse" && component.blown),
-  };
-  coach.evaluate(coachState);
-
-  return (
-    <SimShell
-      title="Simulator Korsleting Listrik"
-      explanation="Baterai menyediakan beda tegangan yang mendorong arus melalui jalur tertutup. Saklar terbuka menghentikan arus. Cabang paralel menyediakan lebih banyak jalur daripada rangkaian seri. Pada korsleting, hambatan sangat kecil menyebabkan arus besar; sekring putus untuk membuka jalur tersebut."
-      objective="Bandingkan arus pada rangkaian seri dan paralel, lalu jelaskan bagaimana sekring melindungi rangkaian saat korsleting."
-      interactionHint="Klik bagian tengah lampu, saklar, atau sekring untuk melihat nilainya. Gunakan tombol Buka/Tutup saklar di panel kanan."
-      curriculumBadge="SMP 9 · SMA 12"
-      paused={paused}
-      onTogglePause={() => setPaused((p) => !p)}
-      onReset={handleReset}
-      muted={muted}
-      onToggleMute={() => setMuted((m) => !m)}
-      mascot={<EllieMascot line={coach.activeStep.message(coachState)} />}
-      stage={<CircuitCanvas state={canvasState} onSelect={setSelectedId} selectedId={selectedId} />}
-      controls={
-        <CircuitControls
-          state={controls}
-          onChange={(next) => {
-            if (next.presetId) handlePresetChange(next.presetId);
-            setControls((prev) => ({ ...prev, ...next }));
-          }}
-          presets={CIRCUIT_PRESETS}
-          selectedComponent={selectedComponent}
-          onToggleSwitch={handleToggleSwitch}
-          onReplaceComponent={handleReplaceComponent}
-          current={selectedCurrent}
-          power={selectedPower}
-        />
-      }
-      dataPanel={
-        controls.showMeters && solution ? (
-          <dl className="sim-data-grid">
-            {components.map((component) => (
-              <div key={component.id}>
-                <dt>{component.kind} ({component.id})</dt>
-                <dd>
-                  {Math.abs(solution.branchCurrents[component.id] || 0).toFixed(2)} A ·{" "}
-                  {(solution.branchPower[component.id] || 0).toFixed(1)} W
-                </dd>
-              </div>
-            ))}
-          </dl>
-        ) : undefined
-      }
-      formula={
-        <>
-          <p>
-            Rangkaian diselesaikan dengan analisis simpul (nodal analysis):
-            setiap titik sambungan punya tegangan, dan jumlah arus yang
-            masuk/keluar dari setiap titik harus nol. Arus di setiap
-            komponen dihitung dari hukum Ohm I = V/R menggunakan selisih
-            tegangan di kedua ujungnya.
-          </p>
-          <p>
-            Arus konvensional mengalir dari kutub positif baterai ke kutub
-            negatif melalui rangkaian luar (titik-titik biru di animasi).
-            Secara fisik, elektron sebenarnya bergerak berlawanan arah
-            (dari kutub negatif ke positif), tetapi arah arus konvensional
-            adalah yang digunakan dalam semua rumus dan rangkaian.
-          </p>
-          <p>
-            Korsleting terjadi ketika ada jalur dengan hambatan sangat
-            kecil (misalnya kabel langsung) menghubungkan kedua kutub
-            baterai, menyebabkan arus sangat besar. Sekring akan putus
-            (menjadi rangkaian terbuka) ketika arus yang melaluinya
-            melebihi nilai rating-nya, melindungi komponen lain dari
-            kerusakan. Lampu akan putus jika daya yang didisipasikannya
-            (P = I²R) melebihi batas maksimumnya.
-          </p>
-        </>
-      }
-      quiz={<QuizPanel title="Uji Pemahaman" questions={QUIZ_QUESTIONS} />}
-    />
-  );
+  return <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={drop}>
+    <div className="circuit-editor" onKeyDown={event => { if (event.key === "Escape") { setWireMode(false); setWireStart(null); setMessage("Sambungan dibatalkan."); } }}>
+      <SimShell title="Simulator Rangkaian Seri & Paralel" curriculumBadge="SMP 9 · SMA 12"
+        explanation="Baterai mendorong arus melalui jalur tertutup. Dalam rangkaian seri, arus melewati setiap komponen secara berurutan dan hambatannya dijumlahkan. Dalam rangkaian paralel, arus terbagi ke beberapa cabang dengan tegangan yang sama. Terang lampu mengikuti daya listriknya; saklar terbuka menghentikan arus di jalurnya."
+        objective="Buat rangkaianmu sendiri. Bandingkan arus, tegangan, dan terang lampu pada susunan seri dan paralel."
+        interactionHint="Seret komponen dari rak ke meja. Klik dua terminal untuk membuat kabel; seret komponen untuk mengatur posisi. Pada ponsel, geser meja ke samping jika perlu."
+        paused={paused} onTogglePause={() => setPaused(p => !p)} muted={muted} onToggleMute={() => setMuted(m => !m)}
+        onReset={() => load(controls.presetId === "custom" ? "empty" : controls.presetId)} mascot={<EllieMascot line={guide} />}
+        stage={<>
+          <div className="circuit-board-toolbar" role="group" aria-label="Alat meja rangkaian">
+            <button className="sim-chip" aria-pressed={!wireMode} onClick={() => { setWireMode(false); setWireStart(null); }}>Pindahkan</button>
+            <button className="sim-chip" aria-pressed={wireMode} onClick={() => { setWireMode(true); setWireStart(null); }}>Sambungkan kabel</button>
+            {wireStart && <button className="sim-chip" onClick={() => { setWireStart(null); setWireMode(false); }}>Batal kabel</button>}
+            <span className="circuit-status" role="status">{status}</span>
+          </div>
+          <CircuitCanvas state={canvasState} selectedId={selectedId} onSelect={select} wireMode={wireMode} wireStart={wireStart} onTerminal={terminal} onMove={move} onRemove={remove} />
+          <p className="circuit-feedback" role="status">{message || "Terminal bulat menandai sambungan. Kabel yang berpotongan tanpa terminal tidak saling terhubung."}</p>
+        </>}
+        controls={<CircuitControls state={controls} presets={CIRCUIT_PRESETS} selectedComponent={selected} hasBattery={!!battery}
+          onChange={next => { if (next.presetId) load(next.presetId); else setControls(prev => ({ ...prev, ...next })); }}
+          onAdd={add} onRemove={remove} onMove={move} onRotate={id => { setComponents(prev => rotateComponent(prev, id)); setWireStart(null); markCustom(); }} onUpdate={update}
+          onToggleSwitch={id => { update(id, { closed: !selected?.closed }); playTone(muted, { frequency: 500, duration: 0.08, type: "square" }); }}
+          onReplaceComponent={id => { update(id, { blown: false, burnedOut: false }); setOverloadedId(null); }}
+          current={selected && solution ? solution.branchCurrents[selected.id] || 0 : null} power={selected && solution ? solution.branchPower[selected.id] || 0 : null} voltage={selectedVoltage} />}
+        dataPanel={<>
+          <dl className="sim-data-grid"><div><dt>Tegangan sumber</dt><dd>{battery?.voltage || 0} V</dd></div><div><dt>Arus total</dt><dd>{Math.abs(current).toFixed(2)} A</dd></div></dl>
+          {controls.showMeters && solution && <dl className="sim-data-grid">{components.filter(c => c.kind !== "wire").map(c => <div key={c.id}><dt>{COMPONENT_NAMES[c.kind]} ({c.id})</dt><dd>{Math.abs(solution.branchCurrents[c.id] || 0).toFixed(2)} A · {(solution.branchPower[c.id] || 0).toFixed(2)} W</dd></div>)}</dl>}
+        </>}
+        formula={<>
+          <p>Hukum Ohm: I = V/R. Daya listrik: P = VI = I²R.</p>
+          <p>Seri: R_total = R₁ + R₂ + …; arus sama pada setiap komponen. Paralel: 1/R_total = 1/R₁ + 1/R₂ + …; tegangan sama pada setiap cabang dan arus total adalah jumlah arus cabang.</p>
+          <p>Simulasi menghitung tegangan simpul dan arus setiap komponen dari sambungan yang kamu buat, bukan dari nama contoh. Model menggunakan satu baterai DC ideal dan hambatan kabel yang sangat kecil. Titik biru menunjukkan arah arus konvensional dari kutub positif ke negatif.</p>
+          <p>Kabel langsung di antara kutub baterai menyebabkan korsleting. Sekring putus jika arus melewati batasnya; lampu putus jika daya melebihi rating. Pilih komponen yang putus untuk menggantinya.</p>
+        </>}
+        quiz={<QuizPanel title="Uji Pemahaman" questions={QUIZ_QUESTIONS} />} />
+    </div>
+  </DndContext>;
 }

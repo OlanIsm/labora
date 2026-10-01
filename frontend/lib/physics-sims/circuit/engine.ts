@@ -1,4 +1,4 @@
-// Pure physics for the dynamic short-circuit simulator. No DOM access.
+// DC circuit physics, independent of the editor and rendering.
 // Circuit solver via Modified Nodal Analysis (MNA): builds a conductance
 // matrix from the component graph and solves for node voltages, which gives
 // branch currents and power dissipation for every component.
