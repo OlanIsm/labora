@@ -196,6 +196,9 @@ export default function Workbench({
       id="sandbox-bench"
       className={`sandbox-bench ${isOver ? "drop-over" : ""} ${state.discipline === "chemistry" && expanded ? "chemistry-bench-expanded" : ""}`}
       aria-label="Meja eksperimen bebas"
+      onClick={event => {
+        if (state.discipline === "chemistry" && event.target === event.currentTarget) onSelect("");
+      }}
     >
       {state.discipline === "chemistry" ? <ChemistryConnections state={state} dispatch={dispatch} /> : <svg
         className="sandbox-connections"

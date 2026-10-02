@@ -66,7 +66,7 @@ export const chemistryMaterialGuides: Record<string, EquipmentGuide> = Object.fr
     purpose: descriptions[material.id],
     usage: material.phase === "solid"
       ? `Ambil ${material.name} dari rak Bahan. Seret ke wadah, atau pilih bahan, wadah tujuan, dan jumlah dalam gram lalu tekan Tuang / campur. Pilih wadah untuk mengamati hasilnya.`
-      : `Ambil ${material.name} dari rak Bahan. Seret ke wadah, atau pilih bahan, wadah tujuan, dan jumlah dalam mL lalu tekan Tuang / campur. Menaruh botol di meja belum menuangkan isinya.`,
+      : `Ambil ${material.name} dari rak Bahan. Seret ke wadah, atau pilih bahan, wadah tujuan, dan jumlah dalam mL lalu tekan Tuang / campur. Menaruh bahan di meja belum memasukkannya ke wadah.`,
     limitation: "Hanya kombinasi yang didukung model menghasilkan reaksi. Tidak ada perubahan bukan bukti bahwa campuran nyata aman atau tidak reaktif. Semua percobaan ini hanya simulasi.",
   }]),
 );

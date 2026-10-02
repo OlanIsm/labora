@@ -1,6 +1,7 @@
 "use client";
 import { useId } from "react";
 import { Material } from "@/lib/sandbox/types";
+import ChemistryMaterialDrawing, { chemistryMaterialForm } from "@/features/chemistry/MaterialDrawing";
 
 export const hasEquipmentDrawing = (material: Material) =>
   material.kind === "container" ||
@@ -416,6 +417,7 @@ export default function EquipmentDrawing({
         <path d="M33 17H47M33 23H47" stroke={stroke} strokeWidth="1.5" />
       </svg>
     );
+  if (chemistryMaterialForm(material)) return <ChemistryMaterialDrawing material={material} />;
   if (material.kind === "material")
     return (
       <svg viewBox="0 0 80 95" aria-hidden="true" className="equipment-drawing">

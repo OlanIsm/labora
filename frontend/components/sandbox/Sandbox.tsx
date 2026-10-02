@@ -114,6 +114,18 @@ function Desk({ discipline }: { discipline: Discipline }) {
   const entity = state.entities.find((e) => e.id === selected);
   const simpleChemistry = discipline === "chemistry";
   const [expandedBench, setExpandedBench] = useState(false);
+  useEffect(() => {
+    if (!simpleChemistry) return;
+    const closeOutside = (event: PointerEvent) => {
+      const menu = document.querySelector<HTMLDetailsElement>(".sandbox.chemistry .sandbox-menu");
+      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+    };
+    window.addEventListener("pointerdown", closeOutside);
+    return () => window.removeEventListener("pointerdown", closeOutside);
+  }, [simpleChemistry]);
+  function closeLabOptions() {
+    document.querySelector<HTMLDetailsElement>(".sandbox.chemistry .sandbox-menu")?.removeAttribute("open");
+  }
   function startIntroduction() {
     setPanelOpen(true);
     setTab(simpleChemistry && entity ? "controls" : "rack");
@@ -341,6 +353,32 @@ function Desk({ discipline }: { discipline: Discipline }) {
       }} onAction={mark} />
   </>;
   const feedbackView = <ActionFeedback feedback={feedback} message={message} onNext={feedbackNext} condensed={simpleChemistry} onDismiss={() => { setFeedback(null); setMessage(""); }} />;
+  const chemistryOptions = <>
+    <div className="chemistry-menu-pair">
+      <button aria-label="Batalkan tindakan" disabled={!history.past.length} onClick={() => { setSpeed(0); send({ type: "undo" }); mark("undo"); }}><Undo2 size={17} />Batalkan</button>
+      <button aria-label="Ulangi tindakan" disabled={!history.future.length} onClick={() => { setSpeed(0); send({ type: "redo" }); }}><Redo2 size={17} />Ulangi</button>
+    </div>
+    <section className="chemistry-menu-group" aria-label="Waktu simulasi">
+      <div className="chemistry-menu-clock"><strong>Waktu simulasi</strong><output>{state.time.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s</output></div>
+      <label className="sandbox-speed">Kecepatan<select aria-label="Kecepatan simulasi" value={speed} onChange={event => changeSpeed(+event.target.value)}><option value={0}>Jeda</option><option value={1}>1×</option><option value={2}>2×</option><option value={5}>5×</option></select></label>
+    </section>
+    <section className="chemistry-menu-group" aria-label="Konfigurasi lokal">
+      <strong>Konfigurasi lokal</strong>
+      <div className="chemistry-menu-pair">
+        <button onClick={() => setMessage(saveBench(state, "saved") ? "Konfigurasi disimpan di browser." : "Storage diblokir; konfigurasi tersimpan sementara di memori.")}>Simpan</button>
+        <button onClick={() => { setSpeed(0); send({ type: "load", state: loadBench(discipline, "saved") }); setSelected(""); setTarget(""); setMessage("Konfigurasi lokal dimuat."); }}>Muat</button>
+      </div>
+      <button onClick={exportImage}><Download size={17} />Unduh gambar SVG</button>
+      <small>Disimpan di browser ini, bukan di akun.</small>
+    </section>
+    <section className="chemistry-menu-group chemistry-menu-links" aria-label="Panduan dan navigasi">
+      <button onClick={() => { closeLabOptions(); startIntroduction(); }}><CircleHelp size={17} />Cara pakai</button>
+      <button aria-expanded={help} onClick={() => { closeLabOptions(); setHelp(!help); }}><BookOpen size={17} />Bantuan & teori</button>
+      <Link href="/challenges" onClick={closeLabOptions}>Tantangan opsional</Link>
+      <Link href="/laboratories" onClick={closeLabOptions}>Pilih lab</Link>
+    </section>
+    {message && <p className="chemistry-menu-status" role="status">{message}</p>}
+  </>;
   return (
     <DndContext
       sensors={sensors}
@@ -423,22 +461,10 @@ function Desk({ discipline }: { discipline: Discipline }) {
             {speed ? "Jeda" : "Jalankan"}
           </button>
           {simpleChemistry && <button aria-label="Reset simulasi" onClick={() => { setSpeed(0); send({ type: "reset", discipline }); setSelected(""); mark("undo"); }}><RotateCcw size={18} />Reset</button>}
-          <details className="sandbox-menu">
-            <summary>Pilihan meja</summary>
+          <details className="sandbox-menu" onKeyDown={event => { if (simpleChemistry && event.key === "Escape") { event.preventDefault(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+            <summary>{simpleChemistry ? "Opsi lab" : "Pilihan meja"}</summary>
             <div className="sandbox-menu-content">
-              {simpleChemistry && <>
-                <button aria-label="Batalkan tindakan" disabled={!history.past.length} onClick={() => { setSpeed(0); send({ type: "undo" }); mark("undo"); }}><Undo2 size={18} />Batalkan</button>
-                <button aria-label="Ulangi tindakan" disabled={!history.future.length} onClick={() => { setSpeed(0); send({ type: "redo" }); }}><Redo2 size={18} />Ulangi</button>
-                <button onClick={startIntroduction}><CircleHelp size={17} />Cara pakai</button>
-                <Link href="/laboratories">Pilihan lab</Link>
-                <details className="sandbox-room-switcher">
-                  <summary>Ganti lab</summary>
-                  <nav aria-label="Pilihan ruang">
-                    {(Object.keys(names) as Discipline[]).map((id) => <Link key={id} href={`/sandbox/${id}`} aria-current={discipline === id ? "page" : undefined}>{names[id]}</Link>)}
-                  </nav>
-                </details>
-              </>}
-              {simpleChemistry && <span className="sandbox-clock">Waktu simulasi: {state.time.toFixed(1)} s</span>}
+              {simpleChemistry ? chemistryOptions : <>
               <label className="sandbox-speed">
                 Waktu
                 <select
@@ -498,6 +524,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
                 <BookOpen size={17} />
                 Tantangan opsional
               </Link>
+              </>}
             </div>
           </details>
         </div>
@@ -534,29 +561,23 @@ function Desk({ discipline }: { discipline: Discipline }) {
           <aside className="sandbox-help">
             <h2>Mulai dari pertanyaanmu</h2>
             <p>
-              Ambil wadah, ambil bahan, lalu pilih tujuan dan jumlah. Sambungkan
-              alat ukur ke wadah untuk membaca nilai. Urutan bebas; Undo dan
-              Reset tidak mengurangi nilai.
+              {simpleChemistry ? "Ambil wadah dan seret bahan ke dalamnya. Sambungkan alat ukur untuk membaca sifat larutan. Pilih benda, lalu Buka panduan untuk petunjuk khusus alat atau bahan itu." : "Ambil wadah, ambil bahan, lalu pilih tujuan dan jumlah. Sambungkan alat ukur ke wadah untuk membaca nilai. Urutan bebas; Undo dan Reset tidak mengurangi nilai."}
             </p>
             <p>
-              Coba bandingkan larutan sebelum dan sesudah diencerkan, ubah
-              panjang bandul, atau bandingkan sel dengan fokus berbeda.
+              {simpleChemistry ? "Coba bandingkan pH sebelum dan sesudah pengenceran. Untuk pemanasan, sambungkan Pembakar, atur suhu target, nyalakan, dan jalankan waktu. Amati perubahan suhu serta volume saat pelarut menguap." : "Coba bandingkan larutan sebelum dan sesudah diencerkan, ubah panjang bandul, atau bandingkan sel dengan fokus berbeda."}
             </p>
             <details>
               <summary>Teori & batas model</summary>
               <p>
-                pH menggunakan neraca muatan, kalor menggunakan Q = mcΔT,
-                rangkaian menggunakan hukum Ohm, pembiasan menggunakan Snell.
-                Model biologis menampilkan laju relatif, bukan prediksi sampel
-                nyata.
+                {simpleChemistry ? "pH memakai pendekatan neraca muatan. Pemanasan mengikuti kapasitas kalor campuran; penguapan memakai titik didih dan kalor laten model air atau etanol. Pada larutan, pelarut berkurang sementara zat terlarut tertinggal." : "pH menggunakan neraca muatan, kalor menggunakan Q = mcΔT, rangkaian menggunakan hukum Ohm, pembiasan menggunakan Snell. Model biologis menampilkan laju relatif, bukan prediksi sampel nyata."}
               </p>
               <p>
-                Reaksi, katalisis, kelarutan, dan ekosistem memakai
+                {simpleChemistry ? "Reaksi, katalisis, kelarutan, dan pemisahan memakai model pembelajaran sederhana, bukan hasil laboratorium terkalibrasi. Kombinasi yang tidak bereaksi di sini belum tentu aman atau tidak reaktif di dunia nyata. Jangan mencoba campuran berbahaya." : <>Reaksi, katalisis, kelarutan, dan ekosistem memakai
                 penyederhanaan pembelajaran. Parameter yang perlu validasi guru
                 ditandai di kode. Katalog saat ini: {ruleCounts.chemistry} entri
                 Kimia, {ruleCounts.physics} Fisika, {ruleCounts.biology}{" "}
                 Biologi. Sebagian entri berbagi model konseptual; angka ini
-                bukan jumlah model ilmiah yang sudah divalidasi.
+                bukan jumlah model ilmiah yang sudah divalidasi.</>}
               </p>
             </details>
             <button onClick={() => setHelp(false)}>Tutup bantuan</button>
@@ -564,7 +585,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
         )}
         <div className="sandbox-layout">
           <div className="sandbox-left">
-            {simpleChemistry && <div className="chemistry-bench-toolbar"><strong>Meja percobaan</strong><button aria-pressed={expandedBench} onClick={() => setExpandedBench(!expandedBench)}>{expandedBench ? "Ukuran normal" : "Perluas meja"}</button></div>}
+            {simpleChemistry && <div className="chemistry-bench-toolbar"><strong>Meja percobaan</strong><button aria-pressed={expandedBench} onClick={() => setExpandedBench(!expandedBench)}>{expandedBench ? "Ringkas meja" : "Tambah ruang"}</button></div>}
             {simpleChemistry && feedbackView}
             <Workbench
               state={state}
@@ -574,6 +595,13 @@ function Desk({ discipline }: { discipline: Discipline }) {
               onPlaceTube={placeTube}
               onSelect={(id) => {
                 setSelected(id);
+                if (simpleChemistry && !id) {
+                  setTarget("");
+                  setMessage("");
+                  setFeedback(null);
+                  setTab("rack");
+                  return;
+                }
                 setTab("controls");
                 setPanelOpen(true);
                 setMessage("");
@@ -628,7 +656,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
               {tab === "rack" && (
                 <Inventory discipline={discipline} onAdd={(id) => add(id)} />
               )}
-              {tab === "controls" && <>{simpleChemistry && <EquipmentExplanation entity={entity} compact />}{controls}</>}
+              {tab === "controls" && <>{simpleChemistry && entity && <><h2 className="chemistry-selected-title">{entity.label}</h2><EquipmentExplanation entity={entity} compact /></>}{controls}</>}
             </div>
           </aside>
         </div>
