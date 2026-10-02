@@ -61,7 +61,11 @@ import { supabase } from "@/lib/supabase";
 import { loadCloud, saveCloudAssignment, saveCloudResult } from "@/lib/cloud";
 import { physicsSimulations, PhysicsSimulationList } from "./physics-sims/Simulations";
 import ChemistryLabList from "@/features/chemistry/ChemistryLabList";
-import { microscopeSlides } from "../features/biology/microscope";
+import BiologyLabList, { biologyActivities } from "../features/biology/BiologyLabList";
+const PeaGardenGame = dynamic(() => import("../features/biology/PeaGardenGame"), {
+  ssr: false,
+  loading: () => <p role="status">Menyiapkan kebun Giffy...</p>,
+});
 const Sandbox = dynamic(() => import("./sandbox/Sandbox"), {
   ssr: false,
   loading: () => <p role="status">Memuat meja eksperimen...</p>,
@@ -175,7 +179,7 @@ function Shell({
   const active = (href: string) =>
     pathname === href ||
     (href === "/laboratories" &&
-      (pathname === "/kimia" || pathname === "/sandbox/chemistry" || pathname === "/fisika" || pathname.startsWith("/fisika/") ||
+      (pathname === "/kimia" || pathname === "/sandbox/chemistry" || pathname === "/sandbox/biology" || pathname === "/biologi" || pathname.startsWith("/biologi/") || pathname === "/fisika" || pathname.startsWith("/fisika/") ||
         ["/laboratories/", "/experiments/", "/lab/", "/results/"].some((prefix) =>
           pathname.startsWith(prefix),
         ))) ||
@@ -390,13 +394,13 @@ function LabChoices() {
       {subjects.map((s) => (
         <Link
           key={s.id}
-          href={s.id === "physics" ? "/fisika" : `/sandbox/${s.id}`}
+          href={s.id === "physics" ? "/fisika" : s.id === "biology" ? "/biologi" : `/sandbox/${s.id}`}
           className={`lab-choice ${s.id}`}
         >
           <div className="lab-choice-head">
             <s.icon size={40} strokeWidth={1.7} />
             <span>
-              {s.id === "physics" ? `${physicsSimulations.length} simulasi`: s.id === "biology" ? `${microscopeSlides.length} preparat`: s.id === "chemistry" ? "Percobaan bebas" : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
+              {s.id === "physics" ? `${physicsSimulations.length} simulasi`: s.id === "biology" ? `${biologyActivities.length} aktivitas`: s.id === "chemistry" ? "Percobaan bebas" : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
             </span>
           </div>
           <h3>{s.name}</h3>
@@ -2726,9 +2730,10 @@ export default function App() {
     (pathname.startsWith("/laboratories/") &&
       subjects.some((s) => pathname.endsWith(s.id)));
   const physicsSimulation = physicsSimulations.find((sim) => pathname === `/fisika/${sim.id}`);
+  const isBiologyActivity = pathname === "/biologi" || pathname === "/biologi/kebun";
   const isPublic =
     ["/", "/login", "/register", "/laboratories"].includes(pathname) ||
-    isSandbox || pathname === "/kimia" || pathname === "/fisika" || !!physicsSimulation;
+    isSandbox || isBiologyActivity || pathname === "/kimia" || pathname === "/fisika" || !!physicsSimulation;
   useEffect(() => {
     if (ready && !user && !isPublic) router.replace("/login");
   }, [ready, user, isPublic, router]);
@@ -2742,6 +2747,8 @@ export default function App() {
   let content: React.ReactNode;
   if (pathname === "/") content = <Landing />;
   else if (pathname === "/kimia") content = <ChemistryLabList />;
+  else if (pathname === "/biologi") content = <BiologyLabList />;
+  else if (pathname === "/biologi/kebun") content = <PeaGardenGame />;
   else if (pathname === "/login" || pathname === "/register")
     content = <Auth onAuth={auth} />;
   else if (pathname === "/dashboard")
@@ -2856,7 +2863,7 @@ export default function App() {
     <Shell
       user={user}
       onLogout={logout}
-      wide={segments[0] === "lab" || isSandbox || !!physicsSimulation}
+      wide={segments[0] === "lab" || isSandbox || isBiologyActivity || !!physicsSimulation}
     >
       {syncError && (
         <div className="sync-error" role="alert">

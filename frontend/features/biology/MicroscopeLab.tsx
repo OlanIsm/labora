@@ -1,10 +1,11 @@
 "use client";
 import { CSSProperties, useState } from "react";
 import { DndContext, DragEndEvent, DragOverlay, MouseSensor, TouchSensor, pointerWithin, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
-import { GripVertical, Microscope, X } from "lucide-react";
+import { ArrowLeft, GripVertical, Microscope, X } from "lucide-react";
+import Link from "next/link";
 import { INITIAL_MICROSCOPE, MicroscopeSlide, SlideId, insertSlide, microscopeObjectiveStage, microscopeSlides, moveMicroscopePan, zoomMicroscope } from "./microscope";
 import MicroscopeField from "./MicroscopeField";
-import EllieMascot from "../../components/physics-sims/shared/EllieMascot";
+import GiffyMascot from "./GiffyMascot";
 import { microscopeGuide } from "./microscopeCoach";
 
 function SlideGlass({ slide }: { slide: MicroscopeSlide }) {
@@ -54,7 +55,7 @@ export default function MicroscopeLab() {
     const selected = microscopeSlides.find(s => s.id === id);
     if (!selected) return;
     setView(insertSlide(id));
-    setMessage(`${selected.name} dimasukkan. Mulai dari objektif 4×, lalu ikuti panduan Ellie untuk melihat lebih dekat.`);
+    setMessage(`${selected.name} dimasukkan. Mulai dari objektif 4×, lalu ikuti panduan Giffy untuk melihat lebih dekat.`);
   }
   function drop(event: DragEndEvent) {
     setDraggedId(null);
@@ -77,8 +78,9 @@ export default function MicroscopeLab() {
     onDragStart={event => setDraggedId(event.active.data.current?.slideId || null)}
     onDragCancel={() => { setDraggedId(null); setMessage("Pemindahan preparat dibatalkan. Preparat di mikroskop tetap sama."); }}>
     <div className="microscope-lab">
+      <Link href="/biologi" className="back-link"><ArrowLeft size={18} /> Semua aktivitas Biologi</Link>
       <div className="page-heading">
-        <h1>Lab Biologi</h1>
+        <h1>Mikroskop Biologi</h1>
         <p>Dunia kecil, banyak yang bisa diamati. Pilih preparat dan lihat lebih dekat.</p>
       </div>
       <div className="microscope-layout">
@@ -106,11 +108,11 @@ export default function MicroscopeLab() {
           <div className="microscope-scale"><strong>{view.objective * 10}× total (simulasi)</strong><span>Okuler 10× × objektif {view.objective}×</span></div>
           <section className="microscope-guide" aria-label="Panduan pengamatan mikroskop">
             <div className="microscope-guide-heading">
-              <h3>{!slide ? "Mulai bersama Ellie" : hasPanned ? "Jelajahi preparat" : stage === 4 ? "Amati keseluruhan" : stage === 10 ? "Kenali struktur sel" : stage === 40 ? "Periksa lebih dekat" : "Pahami batas zoom"}</h3>
-              <button className="text-link" type="button" aria-expanded={guideVisible} aria-controls="microscope-ellie" onClick={() => setGuideVisible(visible => !visible)}>{guideVisible ? "Sembunyikan Ellie" : "Tampilkan Ellie"}</button>
+              <h3>{!slide ? "Mulai bersama Giffy" : hasPanned ? "Jelajahi preparat" : stage === 4 ? "Amati keseluruhan" : stage === 10 ? "Kenali struktur sel" : stage === 40 ? "Periksa lebih dekat" : "Pahami batas zoom"}</h3>
+              <button className="text-link" type="button" aria-expanded={guideVisible} aria-controls="microscope-giffy" onClick={() => setGuideVisible(visible => !visible)}>{guideVisible ? "Sembunyikan Giffy" : "Tampilkan Giffy"}</button>
             </div>
-            <div id="microscope-ellie" hidden={!guideVisible}>
-              <EllieMascot line={guide.line} />
+            <div id="microscope-giffy" hidden={!guideVisible}>
+              <GiffyMascot line={guide.line} />
               <button className="button primary small microscope-guide-next" type="button" onClick={followGuide}>{guide.actionLabel}</button>
             </div>
           </section>

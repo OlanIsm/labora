@@ -30,6 +30,7 @@ export default function SubmarineControls({
           max={100}
           step={1}
           unit="%"
+          formatValue={(value) => value.toFixed(0)}
           onChange={(value) => onChange({ ballastWaterFraction: value / 100 })}
         />
         <p className="sim-hint">

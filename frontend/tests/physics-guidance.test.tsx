@@ -6,6 +6,7 @@ import RollerCoasterPage from "../components/physics-sims/roller-coaster/RollerC
 import SubmarinePage from "../components/physics-sims/submarine/SubmarinePage";
 import OpticsPage from "../components/physics-sims/optics/OpticsPage";
 import CircuitPage from "../components/physics-sims/circuit/CircuitPage";
+import SubmarineControls from "../components/physics-sims/submarine/SubmarineControls";
 
 for (const Page of [ProjectilePage, RollerCoasterPage, SubmarinePage, OpticsPage, CircuitPage]) {
   const markup = renderToStaticMarkup(<Page />);
@@ -25,4 +26,10 @@ for (const text of ["Simulator Rangkaian Seri &amp; Paralel", "Rak komponen", "M
 for (const name of ["Baterai", "Lampu", "Resistor", "Saklar", "Sekring", "Kabel"]) assert.ok(circuit.includes(`aria-label="Tambahkan ${name}"`));
 const optics = renderToStaticMarkup(<OpticsPage />);
 assert.ok(optics.includes('aria-label="Pilih objek optik"'));
+for (let percent = 0; percent <= 100; percent++) {
+  const controls = renderToStaticMarkup(<SubmarineControls
+    state={{ ballastWaterFraction: percent / 100, fluidId: "water", propellerForce: 0, challengeMode: false, challengeTargetDepth: 10 }}
+    onChange={() => {}} onReleaseFromSurface={() => {}} />);
+  assert.ok(controls.includes(`<strong>${percent} %</strong>`), `Ballast slider must display ${percent}% without floating-point artifacts`);
+}
 console.log("Physics guidance render checks passed for all five simulations.");

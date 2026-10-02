@@ -535,7 +535,7 @@ Example copy:
 
 ---
 
-## Biology Mascot
+## Giffy the Giraffe Scientist
 
 Role:
 
@@ -550,6 +550,7 @@ Personality:
 
 Visual:
 
+- Golden body, brown spots, long neck, and small ossicones
 - Green accents
 - Microscope
 - Leaf or specimen
