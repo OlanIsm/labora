@@ -1,19 +1,54 @@
 import { strict as assert } from "node:assert";
 import { solveCircuit, shouldFuseBlow } from "../lib/physics-sims/circuit/engine";
 import { assignNodes, CIRCUIT_PRESETS, toElectricalComponents } from "../lib/physics-sims/circuit/presets";
+import { connectPoints, createComponent, moveComponent, rotateComponent } from "../lib/physics-sims/circuit/editor";
 
-// Series preset: battery(9V) -> lamp(8ohm) -> closed switch -> back.
-// Total resistance ~8 ohm (switch/wire negligible) -> I = 9/8 = 1.125A.
+// Two lamps in series must carry the same current.
 {
   const preset = CIRCUIT_PRESETS.find((p) => p.id === "series")!;
   const { nodeCount } = assignNodes(preset.components);
   const electrical = toElectricalComponents(preset.components);
   const solution = solveCircuit(electrical, nodeCount);
-  const expected = 9 / 8;
+  const expected = 9 / (8 + 12);
   assert.ok(
     Math.abs(solution.branchCurrents.lamp1 - expected) / expected < 0.01,
     `series preset lamp current should be ~${expected}A, got ${solution.branchCurrents.lamp1}`,
   );
+  assert.ok(Math.abs(solution.branchCurrents.lamp2 - expected) < 0.001);
+}
+
+// Build, move, rotate, and rewire a user-made circuit with the editor operations.
+{
+  const battery = createComponent("battery", "source", { col: 1, row: 1 });
+  const lamp1 = createComponent("lamp", "first", { col: 1, row: 3 });
+  const lamp2 = createComponent("lamp", "second", { col: 1, row: 5 });
+  let circuit = [battery, lamp1, lamp2];
+  const solve = (placed: typeof circuit) => solveCircuit(toElectricalComponents(placed), assignNodes(placed).nodeCount);
+  assert.equal(solve(circuit).branchCurrents.first, 0, "Unconnected lamps must not light");
+  circuit = connectPoints(circuit, "lead", battery.from, lamp1.from);
+  assert.ok(Math.abs(solve(circuit).branchCurrents.first) < 1e-6, "A lamp with only one terminal connected must not light");
+  circuit = connectPoints(circuit, "middle", lamp1.to, lamp2.from);
+  circuit = connectPoints(circuit, "return", lamp2.to, battery.to);
+  const series = solve(circuit);
+  assert.ok(Math.abs(series.branchCurrents.first - 9 / 16) < 0.001);
+  assert.ok(Math.abs(series.branchCurrents.first - series.branchCurrents.second) < 1e-6);
+  const moved = moveComponent(circuit, "first", 4, 0);
+  assert.ok(Math.abs(solve(moved).branchCurrents.first - series.branchCurrents.first) < 0.001, "Attached wires must follow a moved lamp");
+  const rotated = rotateComponent(moved, "first");
+  assert.ok(Math.abs(solve(rotated).branchCurrents.first - series.branchCurrents.first) < 0.001, "Rotation must preserve attached wires");
+  const bounded = moveComponent(rotated, "first", -100, 100);
+  for (const c of bounded) for (const p of [c.from, c.to]) assert.ok(p.col >= 0 && p.col <= 8 && p.row >= 0 && p.row <= 5);
+  assert.equal(connectPoints(circuit, "zero", battery.from, battery.from), circuit);
+  assert.equal(connectPoints(circuit, "duplicate", lamp1.from, battery.from), circuit);
+  circuit = circuit.filter(c => c.id !== "middle");
+  circuit = connectPoints(circuit, "branch", battery.from, lamp2.from);
+  circuit = connectPoints(circuit, "return-first", lamp1.to, battery.to);
+  const parallel = solve(circuit);
+  assert.ok(Math.abs(parallel.branchCurrents.first - 9 / 8) < 0.001);
+  assert.ok(Math.abs(parallel.branchCurrents.second - 9 / 8) < 0.001);
+  assert.ok(Math.abs(parallel.branchCurrents.source - 9 / 4) < 0.001);
+  const removed = solve(circuit.filter(c => c.id !== "first"));
+  assert.ok(Math.abs(removed.branchCurrents.second - 9 / 8) < 0.001, "Removing one parallel lamp must leave the other powered");
 }
 
 // Parallel preset: battery(9V) across lamp1(8ohm) and lamp2(12ohm) in parallel.

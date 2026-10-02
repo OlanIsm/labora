@@ -61,6 +61,7 @@ import { supabase } from "@/lib/supabase";
 import { loadCloud, saveCloudAssignment, saveCloudResult } from "@/lib/cloud";
 import { physicsSimulations, PhysicsSimulationList } from "./physics-sims/Simulations";
 import ChemistryLabList from "@/features/chemistry/ChemistryLabList";
+import { microscopeSlides } from "../features/biology/microscope";
 const Sandbox = dynamic(() => import("./sandbox/Sandbox"), {
   ssr: false,
   loading: () => <p role="status">Memuat meja eksperimen...</p>,
@@ -395,7 +396,7 @@ function LabChoices() {
           <div className="lab-choice-head">
             <s.icon size={40} strokeWidth={1.7} />
             <span>
-              {s.id === "physics" ? `${physicsSimulations.length} simulasi` : s.id === "chemistry" ? "Percobaan bebas" : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
+              {s.id === "physics" ? `${physicsSimulations.length} simulasi`: s.id === "biology" ? `${microscopeSlides.length} preparat`: s.id === "chemistry" ? "Percobaan bebas" : `${experiments.filter((e) => e.subject === s.id).length} eksperimen`}
             </span>
           </div>
           <h3>{s.name}</h3>
@@ -720,13 +721,6 @@ function LaboratorySelection() {
         <p>Nggak perlu alat sungguhan. Semua eksperimen dilakukan di layar.</p>
       </div>
       <LabChoices />
-      <section className="home-section">
-        <h2>Simulasi fisika</h2>
-        <p>Coba gerak, gaya apung, rangkaian listrik, optik, dan energi.</p>
-        <Link href="/fisika" className="button primary">
-          Pilih simulasi fisika
-        </Link>
-      </section>
       <section className="home-section">
         <div className="section-heading">
           <div>

@@ -19,6 +19,10 @@ for (const Page of [ProjectilePage, RollerCoasterPage, SubmarinePage, OpticsPage
 
 const circuit = renderToStaticMarkup(<CircuitPage />);
 assert.ok(circuit.includes('aria-label="Pilih komponen rangkaian"'));
+for (const text of ["Simulator Rangkaian Seri &amp; Paralel", "Rak komponen", "Meja kosong", "Rangkaian seri", "Rangkaian paralel", "Sambungkan kabel"]) {
+  assert.ok(circuit.includes(text), `Circuit editor is missing ${text}`);
+}
+for (const name of ["Baterai", "Lampu", "Resistor", "Saklar", "Sekring", "Kabel"]) assert.ok(circuit.includes(`aria-label="Tambahkan ${name}"`));
 const optics = renderToStaticMarkup(<OpticsPage />);
 assert.ok(optics.includes('aria-label="Pilih objek optik"'));
 console.log("Physics guidance render checks passed for all five simulations.");

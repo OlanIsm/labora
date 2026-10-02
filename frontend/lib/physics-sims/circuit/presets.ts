@@ -1,5 +1,5 @@
-// Grid-based circuit layout and preset circuits for the short-circuit
-// simulator. Components snap to a grid; each has fixed grid-cell endpoints
+// Grid-based circuit layout and editable examples.
+// Components snap to a grid; each has grid-cell endpoints
 // that map to electrical nodes once two endpoints occupy the same cell.
 import { Component, ComponentKind } from "./engine";
 
@@ -60,20 +60,24 @@ export type CircuitPreset = { id: string; label: string; components: PlacedCompo
 
 // Series: battery -> lamp -> switch -> back to battery, one loop.
 const SERIES_PRESET: PlacedComponent[] = [
-  { id: "battery", kind: "battery", from: { col: 0, row: 0 }, to: { col: 0, row: 2 }, voltage: 9 },
-  { id: "wire1", kind: "wire", from: { col: 0, row: 0 }, to: { col: 2, row: 0 } },
-  { id: "lamp1", kind: "lamp", from: { col: 2, row: 0 }, to: { col: 2, row: 1 }, resistance: 8, maxPowerWatts: 15 },
-  { id: "switch1", kind: "switch", from: { col: 2, row: 1 }, to: { col: 2, row: 2 }, closed: true },
-  { id: "wire2", kind: "wire", from: { col: 2, row: 2 }, to: { col: 0, row: 2 } },
+  { id: "battery", kind: "battery", from: { col: 1, row: 1 }, to: { col: 1, row: 4 }, voltage: 9 },
+  { id: "wire1", kind: "wire", from: { col: 1, row: 1 }, to: { col: 3, row: 1 } },
+  { id: "lamp1", kind: "lamp", from: { col: 3, row: 1 }, to: { col: 5, row: 1 }, resistance: 8, maxPowerWatts: 25 },
+  { id: "lamp2", kind: "lamp", from: { col: 5, row: 1 }, to: { col: 7, row: 1 }, resistance: 12, maxPowerWatts: 25 },
+  { id: "wireRight", kind: "wire", from: { col: 7, row: 1 }, to: { col: 7, row: 3 } },
+  { id: "switch1", kind: "switch", from: { col: 7, row: 3 }, to: { col: 7, row: 4 }, closed: true },
+  { id: "wire2", kind: "wire", from: { col: 7, row: 4 }, to: { col: 1, row: 4 } },
 ];
 
 // Parallel: battery feeds two lamps in parallel branches.
 const PARALLEL_PRESET: PlacedComponent[] = [
-  { id: "battery", kind: "battery", from: { col: 0, row: 0 }, to: { col: 0, row: 3 }, voltage: 9 },
-  { id: "wireTop", kind: "wire", from: { col: 0, row: 0 }, to: { col: 2, row: 0 } },
-  { id: "lamp1", kind: "lamp", from: { col: 2, row: 0 }, to: { col: 2, row: 3 }, resistance: 8, maxPowerWatts: 15 },
-  { id: "lamp2", kind: "lamp", from: { col: 2, row: 0 }, to: { col: 2, row: 3 }, resistance: 12, maxPowerWatts: 15 },
-  { id: "wireBottom", kind: "wire", from: { col: 2, row: 3 }, to: { col: 0, row: 3 } },
+  { id: "battery", kind: "battery", from: { col: 1, row: 1 }, to: { col: 1, row: 4 }, voltage: 9 },
+  { id: "wireTop", kind: "wire", from: { col: 1, row: 1 }, to: { col: 4, row: 1 } },
+  { id: "lamp1", kind: "lamp", from: { col: 4, row: 1 }, to: { col: 4, row: 4 }, resistance: 8, maxPowerWatts: 25 },
+  { id: "wireTopBranch", kind: "wire", from: { col: 4, row: 1 }, to: { col: 7, row: 1 } },
+  { id: "lamp2", kind: "lamp", from: { col: 7, row: 1 }, to: { col: 7, row: 4 }, resistance: 12, maxPowerWatts: 25 },
+  { id: "wireBottomBranch", kind: "wire", from: { col: 7, row: 4 }, to: { col: 4, row: 4 } },
+  { id: "wireBottom", kind: "wire", from: { col: 4, row: 4 }, to: { col: 1, row: 4 } },
 ];
 
 // Short circuit: a bare wire directly across the battery terminals, in
