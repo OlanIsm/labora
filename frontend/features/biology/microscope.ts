@@ -50,20 +50,47 @@ export const microscopeSlides = (Object.keys(slideDetails) as SlideId[]).map(id 
 export type MicroscopeSlide = typeof microscopeSlides[number];
 export const OBJECTIVES = [4, 10, 40, 100] as const;
 export type Objective = typeof OBJECTIVES[number];
-export const INITIAL_MICROSCOPE = { slideId: null as SlideId | null, objective: 4 as Objective, focus: 0, light: 80 };
+export const INITIAL_MICROSCOPE = { slideId: null as SlideId | null, objective: 4, focus: 0, light: 80, pan: { x: 0, y: 0 } };
 
 export function insertSlide(id: string): typeof INITIAL_MICROSCOPE {
   return microscopeSlides.some(slide => slide.id === id) ? { ...INITIAL_MICROSCOPE, slideId: id as SlideId } : { ...INITIAL_MICROSCOPE };
 }
 
-export function microscopeFieldWidth(objective: Objective): number {
+export function microscopeFieldWidth(objective: number): number {
   // A single photograph cannot supply the extra optical detail of a multi-objective scan.
   const cropWidths: Record<Objective, number> = { 4: 1600, 10: 1120, 40: 640, 100: 320 };
-  return cropWidths[objective];
+  const zoom = Math.max(4, Math.min(100, objective));
+  for (let i = 1; i < OBJECTIVES.length; i++) {
+    const low = OBJECTIVES[i - 1], high = OBJECTIVES[i];
+    if (zoom <= high) return cropWidths[low] + (cropWidths[high] - cropWidths[low]) * (zoom - low) / (high - low);
+  }
+  return cropWidths[100];
 }
 
-export function microscopePhotoViewBox(slide: MicroscopeSlide, objective: Objective): string {
+export function microscopeObjectiveStage(objective: number): Objective {
+  return objective < 10 ? 4 : objective < 40 ? 10 : objective < 100 ? 40 : 100;
+}
+
+function microscopePhotoCenter(slide: MicroscopeSlide, objective: number): number[] {
   const width = microscopeFieldWidth(objective);
-  const [x, y] = slide.photo.focal.map(position => Math.max(0, Math.min(1600 - width, position * 1600 - width / 2)));
-  return `${x} ${y} ${width} ${width}`;
+  return slide.photo.focal.map(position => Math.max(width / 2, Math.min(1600 - width / 2, position * 1600)));
+}
+
+const wrapPhotoOffset = (value: number) => ((value % 1600) + 1600) % 1600;
+
+export function moveMicroscopePan(pan: { x: number; y: number }, dx: number, dy: number): typeof pan {
+  return { x: wrapPhotoOffset(pan.x + dx), y: wrapPhotoOffset(pan.y + dy) };
+}
+
+export function microscopePhotoViewBox(slide: MicroscopeSlide, objective: number, pan = INITIAL_MICROSCOPE.pan): string {
+  const width = microscopeFieldWidth(objective);
+  const [x, y] = microscopePhotoCenter(slide, objective);
+  return `${x - width / 2 + pan.x} ${y - width / 2 + pan.y} ${width} ${width}`;
+}
+
+export function zoomMicroscope(view: typeof INITIAL_MICROSCOPE, slide: MicroscopeSlide, objective: number): typeof INITIAL_MICROSCOPE {
+  const [oldX, oldY] = microscopePhotoCenter(slide, view.objective);
+  const [newX, newY] = microscopePhotoCenter(slide, objective);
+  const pan = view.pan.x || view.pan.y ? moveMicroscopePan(view.pan, oldX - newX, oldY - newY) : view.pan;
+  return { ...view, objective, pan };
 }

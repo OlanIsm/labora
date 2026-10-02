@@ -2,7 +2,7 @@
 import { CSSProperties, useState } from "react";
 import { DndContext, DragEndEvent, DragOverlay, MouseSensor, TouchSensor, pointerWithin, useDraggable, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { GripVertical, Microscope, X } from "lucide-react";
-import { INITIAL_MICROSCOPE, MicroscopeSlide, OBJECTIVES, SlideId, insertSlide, microscopeSlides } from "./microscope";
+import { INITIAL_MICROSCOPE, MicroscopeSlide, SlideId, insertSlide, microscopeObjectiveStage, microscopeSlides, moveMicroscopePan, zoomMicroscope } from "./microscope";
 import MicroscopeField from "./MicroscopeField";
 import EllieMascot from "../../components/physics-sims/shared/EllieMascot";
 import { microscopeGuide } from "./microscopeCoach";
@@ -24,11 +24,11 @@ function SlideCard({ slide, selected, onLoad }: { slide: MicroscopeSlide; select
   </button>;
 }
 
-function Viewport({ view, slide, dragging }: { view: typeof INITIAL_MICROSCOPE; slide: MicroscopeSlide | undefined; dragging: boolean }) {
+function Viewport({ view, slide, dragging, onPan }: { view: typeof INITIAL_MICROSCOPE; slide: MicroscopeSlide | undefined; dragging: boolean; onPan: (dx: number, dy: number) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: "microscope" });
   return <div ref={setNodeRef} className={`microscope-aperture ${isOver ? "drop-ready" : ""} ${dragging ? "awaiting-slide" : ""}`}
     aria-label="Tempat memasukkan preparat ke mikroskop">
-    {slide ? <MicroscopeField key={slide.id} slide={slide} objective={view.objective} focus={view.focus} light={view.light} /> : <div className="microscope-empty">
+    {slide ? <MicroscopeField key={slide.id} slide={slide} objective={view.objective} focus={view.focus} light={view.light} pan={view.pan} onPan={onPan} /> : <div className="microscope-empty">
       <Microscope size={56} strokeWidth={1.5} aria-hidden="true" />
       <h3>Masukkan satu preparat.</h3>
       <p>Seret kaca preparat ke sini,<br />atau klik preparat di rak.</p>
@@ -45,6 +45,8 @@ export default function MicroscopeLab() {
   const slide = microscopeSlides.find(s => s.id === view.slideId);
   const draggedSlide = microscopeSlides.find(s => s.id === draggedId);
   const guide = microscopeGuide(view, slide);
+  const stage = microscopeObjectiveStage(view.objective);
+  const hasPanned = !!(view.pan.x || view.pan.y);
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }));
 
@@ -64,9 +66,10 @@ export default function MicroscopeLab() {
   function followGuide() {
     const { slideId, objective, adjustment } = guide;
     if (slideId) load(slideId);
-    else if (objective) setView(prev => ({ ...prev, objective }));
+    else if (objective) setView(prev => ({ ...prev, objective, pan: { x: 0, y: 0 } }));
     else if (adjustment === "focus") setView(prev => ({ ...prev, focus: 0 }));
     else if (adjustment === "light") setView(prev => ({ ...prev, light: 80 }));
+    else if (adjustment === "position") setView(prev => ({ ...prev, pan: { x: 0, y: 0 } }));
   }
 
   return <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={drop}
@@ -87,20 +90,23 @@ export default function MicroscopeLab() {
             </button>
           </div>
           <div className="microscope-instrument">
-            <Viewport view={view} slide={slide} dragging={!!draggedSlide} />
-            <div className="microscope-objectives" role="group" aria-label="Pilih lensa objektif">
-              <span>Objektif (simulasi)</span>
-              {OBJECTIVES.map(objective => <button key={objective} type="button" disabled={!slide} aria-pressed={view.objective === objective}
-                aria-label={`Objektif ${objective} kali, perbesaran total ${objective * 10} kali`}
-                onClick={() => { setView(prev => ({ ...prev, objective })); setMessage(`Objektif ${objective}× dipilih. Perbesaran total ${objective * 10}×. Bidang pandang ${objective > view.objective ? "menyempit" : "berubah"}.`); }}>
-                {objective}×
-              </button>)}
-            </div>
+            <Viewport view={view} slide={slide} dragging={!!draggedSlide} onPan={(dx, dy) => setView(prev => ({ ...prev, pan: moveMicroscopePan(prev.pan, dx, dy) }))} />
+            <label className="microscope-zoom">Zoom <strong>{view.objective}×</strong>
+              <span>100×</span>
+              <input type="range" min="4" max="100" step="1" value={view.objective} disabled={!slide} aria-label="Zoom preparat" aria-orientation="vertical"
+                aria-valuetext={`${view.objective} kali, perbesaran total ${view.objective * 10} kali (simulasi)`}
+                onChange={event => { const objective = Number(event.target.value); if (slide) setView(prev => zoomMicroscope(prev, slide, objective)); }} />
+              <span>4×</span>
+            </label>
+          </div>
+          <div className="microscope-navigation">
+            <p id="microscope-pan-help">Seret foto untuk menggeser preparat. Tombol panah keyboard juga bisa digunakan.</p>
+            <button className="button ghost small" type="button" disabled={!slide || !hasPanned} onClick={() => setView(prev => ({ ...prev, pan: { x: 0, y: 0 } }))}>Pusatkan kembali</button>
           </div>
           <div className="microscope-scale"><strong>{view.objective * 10}× total (simulasi)</strong><span>Okuler 10× × objektif {view.objective}×</span></div>
           <section className="microscope-guide" aria-label="Panduan pengamatan mikroskop">
             <div className="microscope-guide-heading">
-              <h3>{!slide ? "Mulai bersama Ellie" : view.objective === 4 ? "Amati keseluruhan" : view.objective === 10 ? "Kenali struktur sel" : view.objective === 40 ? "Periksa lebih dekat" : "Pahami batas zoom"}</h3>
+              <h3>{!slide ? "Mulai bersama Ellie" : hasPanned ? "Jelajahi preparat" : stage === 4 ? "Amati keseluruhan" : stage === 10 ? "Kenali struktur sel" : stage === 40 ? "Periksa lebih dekat" : "Pahami batas zoom"}</h3>
               <button className="text-link" type="button" aria-expanded={guideVisible} aria-controls="microscope-ellie" onClick={() => setGuideVisible(visible => !visible)}>{guideVisible ? "Sembunyikan Ellie" : "Tampilkan Ellie"}</button>
             </div>
             <div id="microscope-ellie" hidden={!guideVisible}>
@@ -116,7 +122,7 @@ export default function MicroscopeLab() {
               <input type="range" min="10" max="100" step="5" value={view.light} disabled={!slide} onChange={e => setView(prev => ({ ...prev, light: Number(e.target.value) }))} />
             </label>
           </div>
-          <p className="microscope-model-note">Foto mikroskop asli; objektif dan perbesaran total adalah label simulasi. Zoom digital menyorot area foto, bukan menambah detail optik baru. Ukuran sel tidak dikalibrasi.</p>
+          <p className="microscope-model-note">Foto mikroskop asli; zoom dan perbesaran total adalah label simulasi. Foto diulang agar preparat bisa digeser tanpa batas. Zoom digital tidak menambah detail optik baru. Ukuran sel tidak dikalibrasi.</p>
           {slide && <details className="microscope-photo-credit"><summary>Kredit foto preparat</summary><p>
             Foto oleh <a href={slide.photo.source} target="_blank" rel="noreferrer">{slide.photo.author}</a>, <a href={slide.photo.licenseUrl} target="_blank" rel="noreferrer">{slide.photo.license}</a>. Dipotong dan dikonversi ke WebP; zoom, fokus, dan pencahayaan diatur oleh simulasi.
           </p></details>}

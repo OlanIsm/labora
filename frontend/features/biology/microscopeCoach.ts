@@ -1,4 +1,4 @@
-import { INITIAL_MICROSCOPE, MicroscopeSlide, Objective, SlideId, microscopeSlides } from "./microscope";
+import { INITIAL_MICROSCOPE, MicroscopeSlide, Objective, SlideId, microscopeObjectiveStage, microscopeSlides } from "./microscope";
 
 const observations: Record<SlideId, Record<Objective, string>> = {
   blood: {
@@ -46,15 +46,17 @@ const observations: Record<SlideId, Record<Objective, string>> = {
 };
 
 const comparisons: Record<SlideId, SlideId> = { blood: "cheek", onion: "cheek", cheek: "onion", elodea: "onion", stomata: "elodea", paramecium: "yeast-slide", "yeast-slide": "paramecium" };
-export type MicroscopeGuide = { line: string; actionLabel: string; objective?: Objective; slideId?: SlideId; adjustment?: "focus" | "light" };
+export type MicroscopeGuide = { line: string; actionLabel: string; objective?: Objective; slideId?: SlideId; adjustment?: "focus" | "light" | "position" };
 
 export function microscopeGuide(view: typeof INITIAL_MICROSCOPE, slide?: MicroscopeSlide): MicroscopeGuide {
   if (!slide) return { line: "Hai, aku Ellie! Kita akan belajar mengenali sel dari foto mikroskop asli. Masukkan satu preparat, mulai dari objektif 4× untuk melihat keseluruhannya, lalu perbesar sedikit demi sedikit. Kamu bisa menyeret preparat atau mengekliknya.", actionLabel: "Mulai dengan preparat darah", slideId: "blood" };
   if (Math.abs(view.focus) >= 4) return { line: `Batas struktur ${slide.name.toLowerCase()} sedang kabur karena pengaturan fokus bergeser. Tajamkan dulu sebelum menafsirkan bercak atau bentuk sel. Pada simulator ini, posisi fokus 0 adalah posisi paling tajam; ketajaman tetap dibatasi foto aslinya.`, actionLabel: "Tajamkan fokus", adjustment: "focus" };
   if (view.light < 35) return { line: "Bidang pandangnya terlalu gelap untuk membedakan batas sel dengan nyaman. Tambahkan cahaya dulu, lalu lihat lagi. Mengubah pencahayaan tidak mengubah jenis atau isi sel pada preparat.", actionLabel: "Terangkan preparat", adjustment: "light" };
-  const line = observations[slide.id][view.objective];
+  if (view.pan.x || view.pan.y) return { line: `Kamu sedang menjelajahi bagian lain dari ${slide.name.toLowerCase()}. Seret foto untuk mencari struktur yang berbeda; gunakan slider untuk melihat lebih dekat. Foto yang sama diulang saat melewati tepinya, jadi ini bukan jaringan baru. ${slide.observation} Untuk kembali ke bagian yang dijelaskan tadi, pusatkan kembali preparat.`, actionLabel: "Kembali ke area panduan", adjustment: "position" };
+  const stage = microscopeObjectiveStage(view.objective);
+  const line = observations[slide.id][stage];
   const next: Record<Objective, Objective> = { 4: 10, 10: 40, 40: 100, 100: 4 };
-  if (view.objective !== 100) return { line, actionLabel: `Perbesar ke objektif ${next[view.objective]}×`, objective: next[view.objective] };
+  if (stage !== 100) return { line, actionLabel: `Perbesar zoom ke ${next[stage]}×`, objective: next[stage] };
   const compareId = comparisons[slide.id];
   const compare = microscopeSlides.find(s => s.id === compareId)!;
   return { line, actionLabel: `Bandingkan dengan ${compare.name.toLowerCase()}`, slideId: compareId };

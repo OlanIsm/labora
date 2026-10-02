@@ -21,7 +21,7 @@
 }
 .microscope-view-toolbar h2, .microscope-rack h2, .microscope-observation h2 { font-size: 1.5rem; }
 .microscope-view-toolbar p { margin-top: 6px; }
-.microscope-instrument { display: flex; align-items: center; justify-content: center; gap: 24px; }
+.microscope-instrument { display: grid; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; justify-items: center; gap: 24px; }
 .microscope-aperture {
   position: relative;
   width: min(100%, 530px);
@@ -33,7 +33,6 @@
   border-radius: 50%;
   background: var(--green-light);
   overflow: hidden;
-  flex: 1 1 0;
   outline: 4px solid var(--line);
   outline-offset: 0;
   transition: outline-color 160ms ease;
@@ -41,19 +40,22 @@
 .microscope-aperture.awaiting-slide { outline: 5px dashed #365f27; outline-offset: 4px; }
 .microscope-aperture.drop-ready { outline: 6px solid #365f27; outline-offset: 4px; }
 .microscope-specimen { display: block; width: 100%; height: 100%; }
-.microscope-photo { position: relative; width: 100%; height: 100%; background: #161b22; }
+.microscope-photo { position: relative; width: 100%; height: 100%; background: #161b22; cursor: grab; touch-action: none; user-select: none; }
+.microscope-photo.panning { cursor: grabbing; }
+.microscope-aperture:focus-within { outline-color: var(--blue-ink); }
 .microscope-photo-message { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: var(--green-light); text-align: center; color: #365f27; }
 .microscope-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; width: 100%; height: 100%; padding: 24px; text-align: center; }
 .microscope-empty > svg { color: #365f27; }
 .microscope-empty h3 { font-size: clamp(1.25rem, 2vw, 1.75rem); }
 .microscope-empty p { font-size: 0.9375rem; color: #365f27; }
 .microscope-drop-hint { position: absolute; inset: 0; display: grid; place-content: center; padding: 24px; text-align: center; color: var(--ink); background: #f1fcebe8; font-weight: 800; pointer-events: none; }
-.microscope-objectives { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 0 0 64px; }
-.microscope-objectives > span { font-size: 0.8125rem; font-weight: 800; color: var(--muted); }
-.microscope-objectives button { width: 64px; height: 64px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--surface); color: var(--ink); font-weight: 800; font-size: 1.125rem; }
-.microscope-objectives button[aria-pressed="true"] { background: var(--green-light); border: 3px solid #365f27; color: #365f27; }
-.microscope-objectives button:hover:not(:disabled) { background: var(--green-light); }
-.microscope-scale { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; margin: 24px 0; padding-right: 88px; font-size: 0.875rem; color: var(--muted); }
+.microscope-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.microscope-navigation p { font-size: 0.8125rem; max-width: 44ch; }
+.microscope-zoom { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 800; }
+.microscope-zoom > strong { color: #365f27; }
+.microscope-zoom > span { font-size: 0.8125rem; font-weight: 400; color: var(--muted); }
+.microscope-zoom input { writing-mode: vertical-lr; direction: rtl; width: 44px; height: clamp(120px, 23vw, 300px); accent-color: #365f27; cursor: ns-resize; }
+.microscope-scale { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; margin: 24px 0; font-size: 0.875rem; color: var(--muted); }
 .microscope-scale strong { color: #365f27; }
 .microscope-adjustments { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
 .microscope-adjustments label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 800; }
@@ -107,11 +109,7 @@
 @media (max-width: 1150px) and (min-width: 901px) {
   .microscope-layout { grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; }
   .microscope-viewer { padding: 20px; }
-  .microscope-instrument { flex-direction: column; gap: 20px; }
-  .microscope-aperture { flex: none; width: 100%; }
-  .microscope-objectives { flex-direction: row; flex-basis: auto; gap: 8px; }
-  .microscope-scale { padding-right: 0; }
-  .microscope-objectives button { width: 48px; height: 48px; font-size: 1rem; }
+  .microscope-instrument { gap: 16px; }
   .microscope-adjustments { grid-template-columns: 1fr; gap: 8px; }
 }
 @media (max-width: 900px) {
@@ -128,15 +126,12 @@
   .microscope-view-toolbar h2, .microscope-rack h2, .microscope-observation h2 { font-size: 1.25rem; }
   .microscope-view-toolbar p { font-size: 0.875rem; }
   .microscope-view-toolbar .button { min-height: 44px; padding: 9px 12px; font-size: 0.8125rem; }
-  .microscope-instrument { flex-direction: column; gap: 20px; }
-  .microscope-aperture { flex: none; width: 100%; border-width: 10px; }
+  .microscope-instrument { grid-template-columns: minmax(0, 1fr) 48px; gap: 12px; }
+  .microscope-aperture { border-width: 10px; }
   .microscope-empty { gap: 10px; padding: 20px; }
   .microscope-empty > svg { width: 40px; height: 40px; }
   .microscope-empty p { font-size: 0.8125rem; }
-  .microscope-objectives { flex-direction: row; flex-basis: auto; flex-wrap: wrap; justify-content: center; gap: 8px; }
-  .microscope-objectives > span { flex-basis: 100%; text-align: center; }
-  .microscope-objectives button { width: 52px; height: 52px; font-size: 1rem; }
-  .microscope-scale { padding-right: 0; margin: 16px 0 20px; gap: 4px; flex-direction: column; align-items: center; }
+  .microscope-scale { margin: 16px 0 20px; gap: 4px; flex-direction: column; align-items: center; }
   .microscope-adjustments { grid-template-columns: 1fr; gap: 12px; }
   .microscope-observation { padding-top: 8px; }
   .microscope-rack { padding-top: 20px; }
@@ -145,5 +140,11 @@
   .microscope-guide .sim-speech { background: transparent; padding: 0; box-shadow: none; }
   .microscope-guide .sim-speech::before { display: none; }
   .microscope-guide-next { width: 100%; }
+}
+@media (max-width: 380px) {
+  .microscope-empty { padding: 12px; gap: 6px; }
+  .microscope-empty > svg { width: 24px; height: 24px; }
+  .microscope-empty h3 { font-size: 1rem; }
+  .microscope-empty p { font-size: 0.75rem; }
 }
 @media (prefers-reduced-motion: reduce) { .microscope-aperture { transition: none; } }

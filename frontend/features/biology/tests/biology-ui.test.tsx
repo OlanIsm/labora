@@ -26,6 +26,8 @@ assert.ok(microscope.includes("Rak preparat"));
 assert.ok(microscope.includes("Belum ada preparat"));
 assert.ok(microscope.includes("Ellie, teman eksperimenmu"));
 assert.ok(microscope.includes("Mulai dengan preparat darah"));
+assert.ok(microscope.includes('aria-label="Zoom preparat"'));
+assert.ok(!microscope.includes("microscope-objectives"));
 assert.equal((microscope.match(/class="microscope-aperture/g) || []).length, 1, "Biology must have one fixed viewing field");
 assert.ok(!microscope.includes('aria-label="Ambil Mikroskop"'), "The microscope must not be a draggable rack item");
 assert.equal(microscopeSlides.length, Object.keys(specimens).length);
@@ -37,7 +39,7 @@ for (const slide of microscopeSlides) {
   assert.equal(inserted.objective, 4);
   assert.ok(existsSync(`public/microscopy/${slide.id}.webp`), `Missing real micrograph for ${slide.id}`);
   for (const objective of OBJECTIVES) {
-    const field = renderToStaticMarkup(<MicroscopeField slide={slide} objective={objective} focus={0} light={80} />);
+    const field = renderToStaticMarkup(<MicroscopeField slide={slide} objective={objective} focus={0} light={80} pan={INITIAL_MICROSCOPE.pan} onPan={noop} />);
     assert.ok(field.includes(`data-specimen="${slide.id}"`));
     assert.ok(field.includes(`perbesaran total ${objective * 10} kali`));
     assert.ok(field.includes(`/microscopy/${slide.id}.webp`));
