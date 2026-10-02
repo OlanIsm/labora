@@ -1,275 +1,127 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { MousePointer2 } from "lucide-react";
+import { useRef } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import { ComponentKind } from "../../../lib/physics-sims/circuit/engine";
 import { GridPoint, PlacedComponent } from "../../../lib/physics-sims/circuit/presets";
-
-const CELL_PX = 70;
-const CANVAS_HEIGHT = 360;
-const ELECTRON_SPEED_PX_PER_SEC = 60; // visual pace, scaled further by current magnitude
-
-function gridToScreen(point: GridPoint, originX: number, originY: number): { x: number; y: number } {
-  return { x: originX + point.col * CELL_PX, y: originY + point.row * CELL_PX };
-}
+import { CIRCUIT_CELL, CIRCUIT_COLUMNS, CIRCUIT_HEIGHT, CIRCUIT_MARGIN, CIRCUIT_ROWS, CIRCUIT_WIDTH, COMPONENT_NAMES, samePoint, snapPoint } from "../../../lib/physics-sims/circuit/editor";
 
 export type CircuitRenderState = {
   components: PlacedComponent[];
-  currents: Record<string, number>; // signed amps, from the solver
-  brightness: Record<string, number>; // 0..1, lamps only
-  overloadedId: string | null; // component that just blew/burned, for the flash effect
+  currents: Record<string, number>;
+  brightness: Record<string, number>;
+  overloadedId: string | null;
   reducedMotion: boolean;
 };
 
-export default function CircuitCanvas({
-  state,
-  onSelect,
-  selectedId,
-}: {
+export function CircuitSymbol({ kind, closed = true, broken = false, brightness = 0 }: {
+  kind: ComponentKind; closed?: boolean; broken?: boolean; brightness?: number;
+}) {
+  if (kind === "lamp") return <>
+    <circle r="20" fill={broken ? "#dde5f0" : brightness > 0 ? `rgba(255, 216, 77, ${0.25 + brightness * 0.75})` : "#fff9db"} stroke="currentColor" strokeWidth="2.5" />
+    <path d="M-12-12 12 12 M-12 12 12-12" fill="none" stroke="currentColor" strokeWidth="2.5" />
+    {brightness > 0 && !broken && <g stroke="#806500" strokeWidth="2" opacity={0.4 + brightness * 0.6}><path d="M0-26v-7 M0 26v7 M-26 0h-7 M26 0h7" /></g>}
+  </>;
+  if (kind === "battery") return <><rect x="-22" y="-24" width="44" height="48" rx="8" fill="#eaf9ff" /><path d="M-7-21v42 M7-12v24" stroke="currentColor" strokeWidth="4" /></>;
+  if (kind === "resistor") return <><rect x="-24" y="-12" width="48" height="24" rx="4" fill="#fff9db" stroke="currentColor" strokeWidth="2.5" /><path d="M-14-12v24 M-3-12v24 M10-12v24" stroke="#a66c23" strokeWidth="4" /></>;
+  if (kind === "switch") return <><rect x="-28" y="-25" width="56" height="50" fill="#f8fbff" /><path d={closed ? "M-20 0H20" : "M-20 0 15-20"} stroke="currentColor" strokeWidth="3" /><circle cx="-20" r="4" fill="currentColor" /><circle cx="20" r="4" fill="currentColor" /></>;
+  if (kind === "fuse") return <><rect x="-22" y="-10" width="44" height="20" rx="6" fill={broken ? "#ffedef" : "#f1fceb"} stroke="currentColor" strokeWidth="2.5" /><path d={broken ? "M-16 0h9 M7 0h9" : "M-16 0H16"} stroke={broken ? "#9a303b" : "currentColor"} strokeWidth="3" /></>;
+  return <path d="M-25 0H25" stroke="currentColor" strokeWidth="4" />;
+}
+
+const screen = (p: GridPoint) => ({ x: CIRCUIT_MARGIN + p.col * CIRCUIT_CELL, y: CIRCUIT_MARGIN + p.row * CIRCUIT_CELL });
+
+export default function CircuitCanvas({ state, onSelect, selectedId, wireMode, wireStart, onTerminal, onMove, onRemove }: {
   state: CircuitRenderState;
   onSelect: (id: string | null) => void;
   selectedId: string | null;
+  wireMode: boolean;
+  wireStart: GridPoint | null;
+  onTerminal: (point: GridPoint) => void;
+  onMove: (id: string, dc: number, dr: number) => void;
+  onRemove: (id: string) => void;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const stateRef = useRef(state);
-  stateRef.current = state;
-  const electronPhase = useRef(0);
-  const flashUntil = useRef(0);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (state.overloadedId) flashUntil.current = performance.now() + 400;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.overloadedId]);
-
-  useEffect(() => {
-    const canvasEl = canvasRef.current;
-    const containerEl = containerRef.current;
-    if (!canvasEl || !containerEl) return;
-    const canvas: HTMLCanvasElement = canvasEl;
-    const container: HTMLDivElement = containerEl;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    const ctx: CanvasRenderingContext2D = context;
-
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      const width = container.clientWidth;
-      canvas.width = width * dpr;
-      canvas.height = CANVAS_HEIGHT * dpr;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${CANVAS_HEIGHT}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    resize();
-    const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(container);
-
-    let lastTime = performance.now();
-    let frameId: number;
-    function draw(now: number) {
-      const dt = (now - lastTime) / 1000;
-      lastTime = now;
-      const current = stateRef.current;
-      if (!current.reducedMotion) electronPhase.current += dt;
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(0, 0, width, height);
-
-      const originX = 60;
-      const originY = 60;
-
-      for (const component of current.components) {
-        drawComponent(
-          ctx,
-          component,
-          originX,
-          originY,
-          current.currents[component.id] || 0,
-          current.brightness[component.id] || 0,
-          component.id === selectedId,
-          electronPhase.current,
-          current.reducedMotion,
-          now < flashUntil.current && component.id === current.overloadedId,
-          component.id === hoveredId,
-        );
-      }
-
-      frameId = requestAnimationFrame(draw);
-    }
-    frameId = requestAnimationFrame(draw);
-    return () => {
-      cancelAnimationFrame(frameId);
-      resizeObserver.disconnect();
-    };
-  }, [hoveredId, selectedId]);
-
-  function pointerPos(event: React.PointerEvent<HTMLCanvasElement>) {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  const { setNodeRef, isOver } = useDroppable({ id: "circuit-board" });
+  const svgRef = useRef<SVGSVGElement>(null);
+  const drag = useRef<{ id: string; point: GridPoint } | null>(null);
+  const terminals = new Map<string, GridPoint>();
+  for (const c of state.components) for (const point of [c.from, c.to]) terminals.set(`${point.col},${point.row}`, point);
+  function pointerPoint(event: React.PointerEvent | React.MouseEvent) {
+    const rect = svgRef.current!.getBoundingClientRect();
+    return snapPoint(((event.clientX - rect.left) / rect.width * CIRCUIT_WIDTH - CIRCUIT_MARGIN) / CIRCUIT_CELL,
+      ((event.clientY - rect.top) / rect.height * CIRCUIT_HEIGHT - CIRCUIT_MARGIN) / CIRCUIT_CELL);
   }
-
-  function findNearestComponent(x: number, y: number): string | null {
-    const originX = 60;
-    const originY = 60;
-    let closest: string | null = null;
-    let closestDist = 20;
-    for (const component of state.components) {
-      const a = gridToScreen(component.from, originX, originY);
-      const b = gridToScreen(component.to, originX, originY);
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const denominator = dx * dx + dy * dy;
-      const t = denominator ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / denominator)) : 0;
-      const dist = Math.hypot(a.x + t * dx - x, a.y + t * dy - y);
-      if (dist < closestDist) {
-        closestDist = dist;
-        closest = component.id;
-      }
-    }
-    return closest;
-  }
-
-  return (
-    <div ref={containerRef} className="sim-canvas-container">
-      <span className="sim-draggable-badge">
-        <MousePointer2 size={12} /> Klik komponen untuk melihat dan mengaturnya
-      </span>
-      <canvas
-        ref={canvasRef}
-        role="img"
-        aria-label="Rangkaian listrik dinamis dengan animasi arus elektron"
-        style={{ cursor: hoveredId ? "pointer" : "default" }}
-        onPointerMove={(event) => {
-          const pos = pointerPos(event);
-          setHoveredId(findNearestComponent(pos.x, pos.y));
+  return <>
+    <div ref={setNodeRef} className={`circuit-board-scroll ${isOver ? "is-over" : ""}`}>
+      <svg ref={svgRef} className={`circuit-board ${wireMode ? "wiring" : ""}`} viewBox={`0 0 ${CIRCUIT_WIDTH} ${CIRCUIT_HEIGHT}`}
+        role="group" aria-label="Meja rangkaian listrik" onClick={event => { if (wireMode) onTerminal(pointerPoint(event)); else onSelect(null); }}
+        onPointerMove={event => {
+          if (!drag.current) return;
+          const point = pointerPoint(event);
+          onMove(drag.current.id, point.col - drag.current.point.col, point.row - drag.current.point.row);
+          drag.current.point = point;
         }}
-        onPointerLeave={() => setHoveredId(null)}
-        onPointerDown={(event) => {
-          const pos = pointerPos(event);
-          onSelect(findNearestComponent(pos.x, pos.y));
-        }}
-      />
-      <div className="sim-object-selector" role="group" aria-label="Pilih komponen rangkaian">
-        {state.components.map((component) => (
-          <button className="sim-chip" key={component.id} aria-pressed={selectedId === component.id} onClick={() => onSelect(component.id)}>
-            {({ battery: "Baterai", lamp: "Lampu", wire: "Kabel", switch: "Saklar", fuse: "Sekring", resistor: "Resistor" })[component.kind]} ({component.id})
-          </button>
-        ))}
-      </div>
+        onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}>
+        <rect width={CIRCUIT_WIDTH} height={CIRCUIT_HEIGHT} fill="#f8fbff" />
+        <g fill="#bdc9d8" aria-hidden="true">
+          {Array.from({ length: (CIRCUIT_COLUMNS + 1) * (CIRCUIT_ROWS + 1) }, (_, index) => {
+            const p = screen({ col: index % (CIRCUIT_COLUMNS + 1), row: Math.floor(index / (CIRCUIT_COLUMNS + 1)) });
+            return <circle key={index} cx={p.x} cy={p.y} r="2" />;
+          })}
+        </g>
+        {!state.components.length && <g className="circuit-empty" pointerEvents="none">
+          <text x={CIRCUIT_WIDTH / 2} y="175" textAnchor="middle">Rangkaianmu dimulai di sini.</text>
+          <text x={CIRCUIT_WIDTH / 2} y="208" textAnchor="middle">Seret baterai dan lampu dari rak, lalu sambungkan kabel.</text>
+        </g>}
+        {state.components.map(c => {
+          const a = screen(c.from), b = screen(c.to);
+          const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+          const selected = selectedId === c.id;
+          const current = state.currents[c.id] || 0;
+          return <g key={c.id} className={`circuit-part ${selected ? "selected" : ""}`} data-component={c.id}
+            tabIndex={0} role="button" aria-label={`${COMPONENT_NAMES[c.kind]} ${c.id}, gunakan tombol panah untuk memindahkan`} aria-pressed={selected}
+            onClick={event => { event.stopPropagation(); onSelect(c.id); }}
+            onPointerDown={event => {
+              if (event.button !== 0 || wireMode) return;
+              event.stopPropagation();
+              onSelect(c.id);
+              drag.current = { id: c.id, point: pointerPoint(event) };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onKeyDown={event => {
+              const moves: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+              if (moves[event.key]) { event.preventDefault(); onSelect(c.id); onMove(c.id, ...moves[event.key]); }
+              if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(c.id); }
+              if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); onRemove(c.id); }
+            }}>
+            <title>{COMPONENT_NAMES[c.kind]} {c.id}</title>
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth="26" />
+            <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={selected ? "#155c7b" : "#4c546a"} strokeWidth={selected ? 5 : 3} />
+            {Math.abs(current) > 1e-6 && <line className={`circuit-flow ${state.reducedMotion ? "still" : ""}`} x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke="#155c7b" strokeWidth="5" strokeDasharray="1 20" strokeLinecap="round" style={{ animationDirection: current < 0 ? "reverse" : "normal" }} />}
+            {c.kind !== "wire" && <g transform={`translate(${x} ${y}) rotate(${c.kind === "lamp" ? 0 : Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI})`}>
+              <CircuitSymbol kind={c.kind} closed={c.closed} broken={c.blown || c.burnedOut} brightness={state.brightness[c.id]} />
+            </g>}
+            {c.kind !== "wire" && <text x={x} y={y + 47} textAnchor="middle" className="circuit-part-label">
+              {c.kind === "battery" ? `${c.voltage} V` : c.kind === "lamp" || c.kind === "resistor" ? `${c.resistance} Ω` : c.kind === "switch" ? c.closed ? "Tertutup" : "Terbuka" : c.blown ? "Putus" : `${c.fuseRatingAmps} A`}
+            </text>}
+            {c.kind === "battery" && <g className="circuit-polarity"><text x={a.x - 20} y={a.y - 12}>+</text><text x={b.x - 20} y={b.y + 24}>−</text></g>}
+          </g>;
+        })}
+        {[...terminals].map(([key, point]) => {
+          const p = screen(point), active = wireStart && samePoint(wireStart, point);
+          return <g key={key} role="button" tabIndex={0} aria-label={`Terminal kolom ${point.col + 1}, baris ${point.row + 1}`} aria-pressed={!!active}
+            className={`circuit-terminal ${active ? "active" : ""}`} data-terminal={key}
+            onPointerDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onTerminal(point); }}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTerminal(point); } }}>
+            <circle cx={p.x} cy={p.y} r="26" fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={active ? 10 : 6} fill={active ? "#ffd84d" : "#fff"} stroke="#155c7b" strokeWidth="2.5" />
+          </g>;
+        })}
+        {wireStart && !terminals.has(`${wireStart.col},${wireStart.row}`) && <circle cx={screen(wireStart).x} cy={screen(wireStart).y} r="10" fill="#ffd84d" stroke="#155c7b" strokeWidth="2.5" />}
+      </svg>
     </div>
-  );
-}
-
-function drawComponent(
-  ctx: CanvasRenderingContext2D,
-  component: PlacedComponent,
-  originX: number,
-  originY: number,
-  current: number,
-  brightness: number,
-  selected: boolean,
-  electronPhase: number,
-  reducedMotion: boolean,
-  flashing: boolean,
-  isHovered: boolean,
-) {
-  const a = gridToScreen(component.from, originX, originY);
-  const b = gridToScreen(component.to, originX, originY);
-  const midX = (a.x + b.x) / 2;
-  const midY = (a.y + b.y) / 2;
-
-  // Clickable-zone cue: a soft highlight behind every component, before any
-  // interaction, so the student can see what is clickable at a glance.
-  if (!selected) {
-    ctx.save();
-    ctx.strokeStyle = isHovered ? "rgba(47, 111, 237, 0.5)" : "rgba(100, 116, 139, 0.18)";
-    ctx.lineWidth = 10;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  ctx.strokeStyle = selected ? "#2f6fed" : "#374151";
-  ctx.lineWidth = selected ? 3 : 2.5;
-  ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
-  ctx.lineTo(b.x, b.y);
-  ctx.stroke();
-
-  if (component.kind === "lamp") {
-    const isOut = component.burnedOut;
-    ctx.beginPath();
-    ctx.fillStyle = isOut ? "#4b5563" : `rgba(250, 204, 21, ${0.3 + brightness * 0.7})`;
-    ctx.arc(midX, midY, 14, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = isOut ? "#1f2937" : "#b45309";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    if (flashing) {
-      ctx.beginPath();
-      ctx.fillStyle = "rgba(239, 68, 68, 0.6)";
-      ctx.arc(midX, midY, 24, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (component.kind === "battery") {
-    ctx.fillStyle = "#1f2937";
-    ctx.fillRect(midX - 10, midY - 16, 20, 32);
-    ctx.fillStyle = "#fff";
-    ctx.font = "11px 'Nunito Sans', sans-serif";
-    ctx.fillText(`${component.voltage}V`, midX + 14, midY + 4);
-  } else if (component.kind === "switch") {
-    ctx.beginPath();
-    ctx.fillStyle = component.closed ? "#16a34a" : "#dc2626";
-    ctx.arc(midX, midY, 8, 0, Math.PI * 2);
-    ctx.fill();
-  } else if (component.kind === "fuse") {
-    const isBlown = component.blown;
-    ctx.beginPath();
-    ctx.fillStyle = isBlown ? "#dc2626" : "#f59e0b";
-    ctx.rect(midX - 12, midY - 6, 24, 12);
-    ctx.fill();
-    ctx.strokeStyle = "#92400e";
-    ctx.stroke();
-    if (flashing) {
-      ctx.strokeStyle = "#dc2626";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(midX - 15, midY - 15);
-      ctx.lineTo(midX + 15, midY + 15);
-      ctx.moveTo(midX + 15, midY - 15);
-      ctx.lineTo(midX - 15, midY + 15);
-      ctx.stroke();
-    }
-  } else if (component.kind === "resistor") {
-    ctx.fillStyle = "#fde68a";
-    ctx.fillRect(midX - 14, midY - 6, 28, 12);
-    ctx.strokeStyle = "#92400e";
-    ctx.strokeRect(midX - 14, midY - 6, 28, 12);
-  }
-
-  // Electron flow: small dots moving along the wire, speed and density
-  // scaled by |current|, direction by its sign (conventional current flows
-  // A->B when positive; electrons physically move B->A, noted in the info
-  // panel rather than reversing the dots here to keep the visual simple).
-  if (!reducedMotion && Math.abs(current) > 1e-6 && !component.blown && !component.burnedOut) {
-    const length = Math.hypot(b.x - a.x, b.y - a.y);
-    const dirX = (b.x - a.x) / length;
-    const dirY = (b.y - a.y) / length;
-    const speed = Math.min(2, Math.abs(current) * 0.3) * ELECTRON_SPEED_PX_PER_SEC;
-    const dotCount = Math.max(2, Math.min(6, Math.round(Math.abs(current))));
-    ctx.fillStyle = "#2563eb";
-    for (let i = 0; i < dotCount; i++) {
-      const offset = ((electronPhase * speed + (i * length) / dotCount) % length) * Math.sign(current || 1);
-      const t = ((offset % length) + length) % length;
-      const px = a.x + dirX * t;
-      const py = a.y + dirY * t;
-      ctx.beginPath();
-      ctx.arc(px, py, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
+    <div className="sim-object-selector" role="group" aria-label="Pilih komponen rangkaian">
+      {state.components.map(c => <button className="sim-chip" key={c.id} aria-pressed={selectedId === c.id} onClick={() => onSelect(c.id)}>{COMPONENT_NAMES[c.kind]} ({c.id})</button>)}
+    </div>
+  </>;
 }

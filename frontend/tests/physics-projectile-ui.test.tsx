@@ -2,7 +2,7 @@ import React from "react";
 import { strict as assert } from "node:assert";
 import { renderToStaticMarkup } from "react-dom/server";
 import ProjectilePage from "../components/physics-sims/projectile/ProjectilePage";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { physicsSimulations, PhysicsSimulationList } from "../components/physics-sims/Simulations";
 
 const markup = renderToStaticMarkup(<ProjectilePage />);
@@ -16,8 +16,13 @@ assert.ok(markup.includes('aria-label="Simulasi gerak parabola proyektil"'));
 const list = renderToStaticMarkup(<PhysicsSimulationList />);
 assert.equal(physicsSimulations.length, 5);
 assert.equal(new Set(physicsSimulations.map((sim) => sim.id)).size, 5);
-for (const sim of physicsSimulations) assert.ok(list.includes(`href="/fisika/${sim.id}"`));
-assert.ok(list.includes('href="/sandbox/physics"'));
+for (const sim of physicsSimulations) {
+  assert.ok(list.includes(`href="/fisika/${sim.id}"`));
+  assert.ok(list.includes(`/physics-previews/${sim.id}.webp`));
+  assert.ok(existsSync(`public/physics-previews/${sim.id}.webp`), `Missing preview for ${sim.id}`);
+}
+assert.ok(!list.includes('class="sim-badge"'), "Simulation cards should not show grade badges");
+assert.ok(!list.includes('href="/sandbox/physics"'));
 const app = readFileSync("components/App.tsx", "utf8");
 assert.ok(app.includes('s.id === "physics" ? "/fisika"'), "Physics lab choice must open the faiz simulations");
 assert.ok(app.includes('pathname === `/fisika/${sim.id}`'), "Only known simulation routes should be public");

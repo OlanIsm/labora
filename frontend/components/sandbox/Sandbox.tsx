@@ -52,6 +52,7 @@ import ActionFeedback from "./ActionFeedback";
 import EquipmentExplanation from "./EquipmentExplanation";
 import ChemistryGuide from "@/features/chemistry/ChemistryGuide";
 import { findBenchSpace } from "@/features/chemistry/placement";
+import MicroscopeLab from "../../features/biology/MicroscopeLab";
 
 const names = {
   chemistry: "Kimia",
@@ -641,7 +642,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
 export default function Sandbox({ discipline }: { discipline: Discipline }) {
   return (
     <LabErrorBoundary>
-      <Desk key={discipline} discipline={discipline} />
+      {discipline === "biology" ? <MicroscopeLab /> : <Desk key={discipline} discipline={discipline} />}
     </LabErrorBoundary>
   );
 }

@@ -250,24 +250,46 @@
 }
 .sim-fisika-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 24px;
 }
 .sim-fisika-card {
   background: #fff;
   border: 1px solid var(--line, #e1e7ed);
-  border-radius: 16px;
-  padding: 18px;
+  border-radius: 24px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   text-decoration: none;
   color: var(--ink);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, border-color 0.18s ease;
 }
 .sim-fisika-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(20, 36, 59, 0.08);
+  border-color: var(--blue-ink);
+}
+.sim-fisika-preview {
+  position: relative;
+  aspect-ratio: 8 / 5;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+.sim-fisika-thumbnail {
+  object-fit: cover;
+}
+.sim-fisika-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  flex: 1;
+}
+.sim-fisika-card-action {
+  margin-top: auto;
+  padding-top: 14px;
+  color: var(--blue-ink);
+  font-weight: 800;
 }
 .sim-fisika-card h3 {
   margin: 0;
@@ -277,6 +299,63 @@
   color: var(--muted, #68788c);
   font-size: 0.9375rem;
 }
+.circuit-board-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.circuit-status {
+  margin-left: auto;
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--blue-ink);
+}
+.circuit-editor .sim-chip[aria-pressed="true"] { background: var(--yellow-light); border-color: var(--physics-ink); color: var(--physics-ink); }
+.circuit-board-scroll { overflow: auto; }
+.circuit-board-scroll.is-over { background: var(--blue-light); outline: 3px solid var(--blue-ink); outline-offset: -3px; }
+.circuit-board { display: block; width: 100%; min-width: 560px; touch-action: none; color: var(--ink); }
+.circuit-board.wiring { cursor: crosshair; }
+.circuit-part { cursor: grab; }
+.circuit-part:active { cursor: grabbing; }
+.circuit-part:focus-visible { outline: none; }
+.circuit-part:focus-visible > line:first-of-type { stroke: #5ec8ff; }
+.circuit-terminal { cursor: crosshair; }
+.circuit-terminal:hover circle:last-child, .circuit-terminal:focus-visible circle:last-child { stroke-width: 5; fill: var(--yellow); }
+.circuit-terminal:focus-visible { outline: none; }
+.circuit-part-label { fill: var(--muted); font: 700 14px "Nunito Sans", sans-serif; pointer-events: none; }
+.circuit-polarity { fill: var(--ink); font: 800 22px "Nunito Sans", sans-serif; }
+.circuit-empty text:first-child { fill: var(--ink); font: 500 24px "Fredoka", sans-serif; }
+.circuit-empty text:last-child { fill: var(--muted); font: 400 16px "Nunito Sans", sans-serif; }
+.circuit-flow { animation: circuit-current 1s linear infinite; pointer-events: none; }
+.circuit-flow.still { animation: none; }
+@keyframes circuit-current { to { stroke-dashoffset: -42; } }
+.circuit-feedback { margin: 0; padding: 12px 16px; font-size: 0.875rem; color: var(--blue-ink); background: var(--blue-light); }
+.circuit-rack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.circuit-rack-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  border: 1px solid var(--control-border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: 800 0.8125rem "Nunito Sans", sans-serif;
+  cursor: grab;
+  touch-action: none;
+}
+.circuit-rack-item svg { width: 56px; height: 56px; }
+.circuit-rack-item:hover:not(:disabled) { background: var(--yellow-light); }
+.circuit-rack-item:disabled { opacity: 0.5; cursor: default; }
+.circuit-rack-item.dragging { position: relative; z-index: 100; }
+.circuit-edit-actions, .circuit-move-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.circuit-editor .sim-stage { overflow: visible; }
+.circuit-editor .sim-stage > :first-child { border-radius: 16px 16px 0 0; }
+.circuit-editor .circuit-feedback { border-radius: 0 0 16px 16px; }
+@media (prefers-reduced-motion: reduce) { .circuit-flow { animation: none; } }
 @media (max-width: 900px) {
   .sim-layout {
     grid-template-columns: 1fr;
