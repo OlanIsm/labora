@@ -68,8 +68,16 @@ const names = {
   free: "Meja Bebas",
 };
 function Desk({ discipline }: { discipline: Discipline }) {
-  const { state, history, dispatch, speed, setSpeed, ready, persistent } =
-    useSandbox(discipline);
+  const {
+    state,
+    history,
+    dispatch,
+    speed,
+    setSpeed,
+    ready,
+    persistent,
+    cloud,
+  } = useSandbox(discipline);
   const [selected, setSelected] = useState(""),
     [target, setTarget] = useState(""),
     [tab, setTab] = useState("rack");
@@ -668,18 +676,45 @@ function Desk({ discipline }: { discipline: Discipline }) {
                 </select>
               </label>
               <button
-                onClick={() =>
+                onClick={async () => {
+                  if (cloud.account) {
+                    try {
+                      await cloud.saveNamed("saved");
+                      setMessage("Konfigurasi disimpan di akun.");
+                    } catch (e) {
+                      setMessage(
+                        e instanceof Error
+                          ? e.message
+                          : "Simpanan belum terkirim.",
+                      );
+                    }
+                    return;
+                  }
                   setMessage(
                     saveBench(state, "saved")
                       ? "Konfigurasi disimpan di browser."
                       : "Storage diblokir; konfigurasi tersimpan sementara di memori.",
-                  )
-                }
+                  );
+                }}
               >
                 Simpan
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  if (cloud.account) {
+                    try {
+                      setSpeed(0);
+                      await cloud.loadNamed("saved");
+                      setMessage("Konfigurasi akun dimuat.");
+                    } catch (e) {
+                      setMessage(
+                        e instanceof Error
+                          ? e.message
+                          : "Simpanan belum dapat dimuat.",
+                      );
+                    }
+                    return;
+                  }
                   setSpeed(0);
                   send({
                     type: "load",
@@ -718,6 +753,17 @@ function Desk({ discipline }: { discipline: Discipline }) {
             </div>
           </details>
         </div>
+        {cloud.account && (
+          <p role="status">
+            {cloud.status}{" "}
+            <button className="button ghost small" onClick={cloud.reload}>
+              Muat simpanan akun
+            </button>{" "}
+            <button className="button ghost small" onClick={cloud.recoverDraft}>
+              Pulihkan draf konflik
+            </button>
+          </p>
+        )}
         {!persistent && (
           <p role="status" className="sandbox-notice">
             Penyimpanan browser diblokir. Meja tetap bisa digunakan; ekspor
@@ -833,6 +879,9 @@ function Desk({ discipline }: { discipline: Discipline }) {
             </p>
             <Observations entity={entity} state={state} />
             <Notebook
+              key={cloud.sessionId || "demo"}
+              account={cloud.account}
+              sessionId={cloud.sessionId}
               state={state}
               entity={entity}
               dispatch={send}

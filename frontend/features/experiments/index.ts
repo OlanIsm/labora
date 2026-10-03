@@ -1,4 +1,5 @@
 export { experiments, getExperiment } from "./domain/definitions";
+export { useCatalog } from "./application/useCatalog";
 export { act, answer, initialRuntime, score } from "./domain/engine";
 export {
   classifyPH,

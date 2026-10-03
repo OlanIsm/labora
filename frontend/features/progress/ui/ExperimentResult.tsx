@@ -15,6 +15,7 @@ export function Result({
   exp: Experiment;
   record?: RecordEntry;
 }) {
+  exp = record?.definition || exp;
   if (!record)
     return (
       <EmptyState
@@ -25,7 +26,12 @@ export function Result({
         Selesaikan eksperimen untuk melihat pengamatan dan nilaimu.
       </EmptyState>
     );
-  const s = score(exp, record.runtime);
+  const local = score(exp, record.runtime);
+  const s = {
+    total: record.score,
+    accuracy: record.accuracy ?? local.accuracy,
+    quiz: record.quiz ?? local.quiz,
+  };
   return (
     <>
       <section className={`result-hero ${exp.subject}`}>

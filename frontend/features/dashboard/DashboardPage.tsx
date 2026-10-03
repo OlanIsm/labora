@@ -18,6 +18,9 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 import { ArrowRight, BookOpen, CheckCircle2, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/shared/infrastructure/api";
+import type { SessionDTO } from "@contracts/laboratory";
+import { useProgressSummary } from "@/features/progress";
 
 export function Dashboard({
   user,
@@ -30,15 +33,39 @@ export function Dashboard({
   assignments: Assignment[];
   runtimes: Pick<RuntimeRepository, "load">;
 }) {
+  const { summary, error: summaryError } = useProgressSummary();
+  const [resumeError, setResumeError] = useState("");
   const [resume, setResume] = useState<Experiment | null>(null);
+  const [resumeAssignment, setResumeAssignment] = useState<
+    string | undefined
+  >();
   useEffect(() => {
+    let active = true;
+    if (user?.mode === "account") {
+      setResume(null);
+      apiFetch<SessionDTO[]>("/sessions?mode=guided")
+        .then((all) => {
+          if (!active) return;
+          const s = all.find((s) => s.status === "active");
+          setResume(s ? getExperiment(s.experimentId || "") || null : null);
+          setResumeAssignment(s?.assignmentId);
+        })
+        .catch((e) => {
+          if (active) setResumeError(e.message);
+        });
+      return () => {
+        active = false;
+      };
+    }
     setResume(
       experiments.find((e) => {
         const runtime = runtimes.load(e.id);
         return runtime && runtime.step > 0 && runtime.step < e.steps.length;
       }) || null,
     );
-  }, [runtimes]);
+  }, [runtimes, user?.id, user?.mode]);
+  const completedCount =
+    summary?.completed ?? new Set(records.map((r) => r.experimentId)).size;
   const recommended =
     resume ||
     experiments.find((e) => !records.some((r) => r.experimentId === e.id)) ||
@@ -52,6 +79,11 @@ export function Dashboard({
         );
   return (
     <>
+      {(summaryError || resumeError) && (
+        <p role="alert" className="form-error">
+          {summaryError || resumeError}
+        </p>
+      )}
       <div className="page-heading">
         <h1>
           Hai{user ? `, ${user.name.split(" ")[0]}` : ""}! Mau coba apa hari
@@ -73,7 +105,11 @@ export function Dashboard({
             <span>{recommended.steps.length} langkah berpandu</span>
           </div>
           <Link
-            href={resume ? labPath(recommended.id) : path(recommended.id)}
+            href={
+              resume
+                ? `${labPath(recommended.id)}${resumeAssignment ? `?assignment=${resumeAssignment}` : ""}`
+                : path(recommended.id)
+            }
             className="button primary"
           >
             {resume ? "Lanjutkan eksperimen" : "Coba eksperimen ini"}{" "}
@@ -89,7 +125,7 @@ export function Dashboard({
         <span>
           <CheckCircle2 size={20} />
           <strong>
-            {records.length} dari {experiments.length}
+            {completedCount} dari {experiments.length}
           </strong>{" "}
           eksperimen selesai
         </span>
@@ -97,12 +133,12 @@ export function Dashboard({
           className="progress-track"
           role="progressbar"
           aria-label="Eksperimen selesai"
-          aria-valuenow={records.length}
+          aria-valuenow={completedCount}
           aria-valuemin={0}
           aria-valuemax={experiments.length}
         >
           <span
-            style={{ width: `${(records.length / experiments.length) * 100}%` }}
+            style={{ width: `${(completedCount / experiments.length) * 100}%` }}
           />
         </div>
         <Link href="/progress" className="text-link">
@@ -161,7 +197,9 @@ export function Dashboard({
           {recent.length ? (
             recent.map((r) => (
               <Link
-                href={resultPath(r.experimentId)}
+                href={
+                  r.id ? `/progress?result=${r.id}` : resultPath(r.experimentId)
+                }
                 className="list-row"
                 key={r.experimentId}
               >

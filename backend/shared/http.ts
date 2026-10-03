@@ -22,6 +22,22 @@ export async function readJson(
     "application/json"
   )
     throw new AppError("UNSUPPORTED_MEDIA_TYPE");
+  const buffer = await readBytes(request, maxBytes);
+  let body: unknown;
+  try {
+    body = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(buffer));
+  } catch {
+    throw new AppError("BAD_REQUEST");
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    throw new AppError("BAD_REQUEST");
+  return body as Record<string, unknown>;
+}
+
+export async function readBytes(
+  request: Request,
+  maxBytes: number,
+): Promise<Buffer> {
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > maxBytes) throw new AppError("PAYLOAD_TOO_LARGE");
   const reader = request.body?.getReader();
@@ -42,17 +58,7 @@ export async function readJson(
   } finally {
     reader.releaseLock();
   }
-  let body: unknown;
-  try {
-    body = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)),
-    );
-  } catch {
-    throw new AppError("BAD_REQUEST");
-  }
-  if (!body || typeof body !== "object" || Array.isArray(body))
-    throw new AppError("BAD_REQUEST");
-  return body as Record<string, unknown>;
+  return Buffer.concat(chunks);
 }
 
 export function apiHandler<T>(

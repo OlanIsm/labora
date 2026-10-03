@@ -69,7 +69,13 @@ export function AccountMenu({
         onClick={() => setOpen(!open)}
       >
         <span className="header-profile-picture">
-          <Image src="/mascot/biology_cat.png" alt="" width={64} height={64} />
+          <Image
+            src={user?.avatarUrl || "/mascot/biology_cat.png"}
+            unoptimized
+            alt=""
+            width={64}
+            height={64}
+          />
         </span>
         <span className="header-account-name">
           <strong>{user?.name || "Tamu"}</strong>

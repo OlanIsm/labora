@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import {
   experiments,
   getExperiment,
-} from "../features/experiments/domain/definitions";
+} from "../../backend/modules/catalog/definitions";
 import {
   act,
   answer,
@@ -96,15 +96,17 @@ for (const experiment of experiments) {
     for (const [index, step] of experiment.steps.entries()) {
       assert.equal(state.step, index, experiment.id);
       if (step.question) {
+        assert.notEqual(step.question.answer, undefined);
+        const expected = step.question.answer!;
         const choice = correct
-          ? step.question.answer
-          : (step.question.answer + 1) % step.question.options.length;
+          ? expected
+          : (expected + 1) % step.question.options.length;
         state = answer(experiment, state, choice);
         assert.equal(state.answers[index].correct, correct);
         assert.equal(state.answers[index].attempts, 1);
         assert.equal(
           state.answers[index].expected,
-          step.question.options[step.question.answer],
+          step.question.options[expected],
         );
         assert.match(
           state.feedback,

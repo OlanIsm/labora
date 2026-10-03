@@ -28,6 +28,12 @@ import RollerCoasterCanvas from "./RollerCoasterCanvas";
 import type { RollerCoasterRenderState } from "./RollerCoasterCanvas";
 import RollerCoasterControls from "./RollerCoasterControls";
 import type { RollerCoasterControlsState } from "./RollerCoasterControls";
+import { useSimulationSave } from "../../../../../application/useSimulationSave";
+import {
+  object,
+  numeric,
+  point,
+} from "../../../../../application/snapshotValidation";
 
 type CoachState = {
   hasReleased: boolean;
@@ -124,6 +130,33 @@ export default function RollerCoasterPage() {
     TRACK_PRESETS[0].controlPoints.map((p) => ({ ...p })),
   );
   const [editable, setEditable] = useState(false);
+  const cloud = useSimulationSave(
+    "roller-coaster",
+    { controls, controlPoints },
+    (v) => {
+      setControls(v.controls);
+      setControlPoints(v.controlPoints);
+    },
+    (
+      v: unknown,
+    ): v is {
+      controls: RollerCoasterControlsState;
+      controlPoints: ControlPoint[];
+    } => {
+      if (!object(v) || !object(v.controls)) return false;
+      const c = v.controls;
+      return (
+        numeric(c.mass, 0.01, 1000) &&
+        numeric(c.frictionCoefficient, 0, 1) &&
+        typeof c.presetId === "string" &&
+        TRACK_PRESETS.some((p) => p.id === c.presetId) &&
+        Array.isArray(v.controlPoints) &&
+        v.controlPoints.length >= 2 &&
+        v.controlPoints.length <= 100 &&
+        v.controlPoints.every(point)
+      );
+    },
+  );
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const reducedMotion = usePrefersReducedMotion();
@@ -252,6 +285,7 @@ export default function RollerCoasterPage() {
 
   return (
     <SimShell
+      cloud={cloud}
       title="Roller Coaster Maker"
       explanation="Di tempat tinggi, kereta menyimpan energi potensial. Saat turun, energi itu berubah menjadi energi kinetik sehingga kereta makin cepat. Gesekan mengubah sebagian energi menjadi panas. Bar energi menunjukkan perpindahan ini; energi tidak sekadar menghilang."
       objective="Buat kereta mencapai akhir lintasan dan cari tahu bagaimana ketinggian serta gesekan mengubah energinya."

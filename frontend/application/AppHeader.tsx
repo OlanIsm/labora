@@ -11,6 +11,8 @@ import { AccountMenu } from "./AccountMenu";
 import { HelpPanel } from "./HelpPanel";
 import { buildNotifications } from "./notifications";
 import { NotificationsPanel } from "./NotificationsPanel";
+import { apiFetch } from "@/shared/infrastructure/api";
+import type { NotificationDTO } from "@contracts/laboratory";
 
 export function AppHeader({
   user,
@@ -27,23 +29,69 @@ export function AppHeader({
 }) {
   const [panel, setPanel] = useState<"help" | "notifications" | null>(null);
   const [readIds, setReadIds] = useState<string[]>([]);
+  const [remoteNotifications, setRemoteNotifications] = useState<
+      NotificationDTO[]
+    >([]),
+    [notificationError, setNotificationError] = useState("");
   const readKey = `labora-notifications-read:${user?.email || "guest"}`;
   useEffect(() => {
+    if (user?.mode === "account") {
+      setReadIds([]);
+      return;
+    }
     const stored = browserStorage.read<unknown>(readKey, []);
     setReadIds(
       Array.isArray(stored)
         ? stored.filter((id): id is string => typeof id === "string")
         : [],
     );
-  }, [readKey]);
-  const notifications = buildNotifications(user, assignments, records);
+  }, [readKey, user?.mode]);
+  useEffect(() => {
+    if (user?.mode !== "account") {
+      setRemoteNotifications([]);
+      return;
+    }
+    let active = true;
+    setRemoteNotifications([]);
+    setNotificationError("");
+    apiFetch<NotificationDTO[]>("/notifications")
+      .then((data) => {
+        if (active) {
+          setRemoteNotifications(data);
+          setReadIds(data.filter((n) => n.readAt).map((n) => n.id));
+        }
+      })
+      .catch((e) => {
+        if (active) setNotificationError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id, user?.mode, panel, assignments, records]);
+  const notifications =
+    user?.mode === "account"
+      ? remoteNotifications
+      : buildNotifications(user, assignments, records);
   const unread = notifications.filter(
     (notification) => !readIds.includes(notification.id),
   ).length;
-  function markRead(ids: string[]) {
+  async function markRead(ids: string[]) {
+    if (user?.mode === "account") {
+      try {
+        await apiFetch("/notifications", {
+          method: "PATCH",
+          body: JSON.stringify({ ids }),
+        });
+      } catch (e) {
+        setNotificationError(
+          e instanceof Error ? e.message : "Status baca belum tersimpan.",
+        );
+        return;
+      }
+    }
     const updated = [...new Set([...readIds, ...ids])];
     setReadIds(updated);
-    browserStorage.write(readKey, updated);
+    if (user?.mode !== "account") browserStorage.write(readKey, updated);
   }
 
   return (
@@ -98,6 +146,7 @@ export function AppHeader({
           notifications={notifications}
           readIds={readIds}
           guest={!user}
+          error={notificationError}
           onRead={(id) => markRead([id])}
           onReadAll={() =>
             markRead(notifications.map((notification) => notification.id))

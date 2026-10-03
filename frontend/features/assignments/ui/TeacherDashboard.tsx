@@ -6,6 +6,7 @@ import type { RecordEntry } from "@/features/progress/model";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ArrowRight, BookOpen, CheckCircle2, Plus } from "lucide-react";
 import Link from "next/link";
+import { useAccount } from "@/shared/accountContext";
 
 export function Teacher({
   assignments,
@@ -14,6 +15,7 @@ export function Teacher({
   assignments: Assignment[];
   records: RecordEntry[];
 }) {
+  const account = useAccount().mode === "account";
   return (
     <>
       <div className="page-heading">
@@ -31,10 +33,12 @@ export function Teacher({
           <BookOpen size={24} />
           <strong>{assignments.length}</strong> tugas dibuat
         </span>
-        <span>
-          <CheckCircle2 size={24} />
-          <strong>{records.length}</strong> hasil tercatat di perangkat ini
-        </span>
+        {!account && (
+          <span>
+            <CheckCircle2 size={24} />
+            <strong>{records.length}</strong> hasil tercatat di perangkat ini
+          </span>
+        )}
       </div>
       <div className="section-heading">
         <h2>Tugas yang kamu buat</h2>

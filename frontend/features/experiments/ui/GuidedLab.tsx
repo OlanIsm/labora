@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { RuntimeRepository } from "../repository";
+import type { ResultDTO } from "@contracts/laboratory";
 
 import { useGuidedExperiment } from "../application/useGuidedExperiment";
 
@@ -37,11 +38,13 @@ export function Lab({
   assignment,
   onComplete,
   runtimes,
+  accountId,
 }: {
   exp: Experiment;
   assignment?: Assignment;
-  onComplete: (runtime: Runtime) => Promise<void>;
+  onComplete: (runtime: Runtime, result?: ResultDTO) => Promise<void>;
   runtimes: RuntimeRepository;
+  accountId?: string;
 }) {
   const {
     state,
@@ -63,7 +66,13 @@ export function Lab({
     doAction,
     doAnswer,
     reset,
-  } = useGuidedExperiment(exp, assignment, runtimes);
+    pending,
+    hydrated,
+    retryLoad,
+    submit,
+    activeExperiment,
+  } = useGuidedExperiment(exp, assignment, runtimes, accountId);
+  exp = activeExperiment;
   const [dragging, setDragging] = useState<string | null>(null);
   const [mobile, setMobile] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -172,11 +181,23 @@ export function Lab({
             <span>Tentang eksperimen</span>
           </Link>
           <strong>{exp.title}</strong>
-          <button onClick={reset} className="button ghost small">
+          <button
+            onClick={reset}
+            disabled={pending || !hydrated}
+            className="button ghost small"
+          >
             <RotateCcw size={17} />
             Ulangi
           </button>
         </div>
+        {accountId && !hydrated && feedbackError && (
+          <p role="alert">
+            {state.feedback}{" "}
+            <button className="button ghost small" onClick={retryLoad}>
+              Coba muat sesi
+            </button>
+          </p>
+        )}
         <div className="lab-layout">
           <div className="lab-primary">
             <div className="lab-progress">
@@ -227,7 +248,11 @@ export function Lab({
                       <h3>{current.question.prompt}</h3>
                       <div className="answer-grid">
                         {current.question.options.map((option, i) => (
-                          <button key={i} onClick={() => doAnswer(i)}>
+                          <button
+                            key={i}
+                            disabled={pending || !hydrated}
+                            onClick={() => doAnswer(i)}
+                          >
                             <span>{String.fromCharCode(65 + i)}</span>
                             {option}
                           </button>
@@ -239,6 +264,7 @@ export function Lab({
                       {needed && (
                         <button
                           className="button primary"
+                          disabled={pending || !hydrated}
                           onClick={() => doAction(current.action, needed.id)}
                         >
                           <Icon name={needed.icon} size={19} />
@@ -273,7 +299,7 @@ export function Lab({
                     onClick={async () => {
                       setSaving(true);
                       try {
-                        await onComplete(state);
+                        await onComplete(state, await submit());
                       } catch {
                         setState((s) => ({
                           ...s,

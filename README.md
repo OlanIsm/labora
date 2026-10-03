@@ -5,7 +5,8 @@ Labora is a virtual science laboratory with nine guided experiments, quizzes, pr
 ## Project structure
 
 - `frontend/` — Next.js modular monolith, feature-owned simulation engines, and `public/` assets.
-- `backend/` — Supabase database schema and setup guidance. Supabase hosts authentication and shared data; no separate Node server is required.
+- `backend/` — server modules for authentication, classrooms, versioned experiments, sessions, assessment, assignments, notes and notifications; Supabase migrations and setup guidance.
+- `shared/` — typed API contracts and the pure guided experiment engine. The same Next.js deployment hosts the API.
 
 ## Run locally
 

@@ -9,8 +9,27 @@ import { EmptyState } from "@/shared/ui/EmptyState";
 import { SubjectBadge } from "@/shared/ui/SubjectBadge";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { useAccount } from "@/shared/accountContext";
+import { apiFetch } from "@/shared/infrastructure/api";
+import { useProgressSummary } from "../useProgressSummary";
 
 export function Progress({ records }: { records: RecordEntry[] }) {
+  const { summary, error: summaryError } = useProgressSummary();
+  const account = useAccount().mode === "account";
+  const [extra, setExtra] = useState<RecordEntry[]>([]);
+  const [offset, setOffset] = useState(50);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const initialRecords = records;
+  records = [
+    ...new Map(
+      [...records, ...extra].map((record) => [
+        record.id || record.completedAt,
+        record,
+      ]),
+    ).values(),
+  ];
   return (
     <>
       <div className="page-heading">
@@ -23,26 +42,28 @@ export function Progress({ records }: { records: RecordEntry[] }) {
       <div className="progress-overview">
         <div>
           <strong>
-            {records.length}
+            {summary?.completed ??
+              new Set(records.map((r) => r.experimentId)).size}
             <small>/{experiments.length}</small>
           </strong>
           <span>Eksperimen selesai</span>
         </div>
         <div>
           <strong>
-            {records.length
-              ? `${Math.round(records.reduce((a, b) => a + b.score, 0) / records.length)}%`
-              : "Belum ada"}
+            {summary
+              ? `${summary.averageScore}%`
+              : records.length
+                ? `${Math.round(records.reduce((a, b) => a + b.score, 0) / records.length)}%`
+                : "Belum ada"}
           </strong>
           <span>Rata-rata nilai</span>
         </div>
         <div>
           <strong>
-            {
+            {summary?.subjects ??
               new Set(
                 records.map((r) => getExperiment(r.experimentId)?.subject),
-              ).size
-            }
+              ).size}
             <small>/{subjects.length}</small>
           </strong>
           <span>Lab yang dicoba</span>
@@ -60,8 +81,8 @@ export function Progress({ records }: { records: RecordEntry[] }) {
             const exp = getExperiment(r.experimentId);
             return exp ? (
               <Link
-                href={resultPath(exp.id)}
-                key={r.experimentId}
+                href={r.id ? `/progress?result=${r.id}` : resultPath(exp.id)}
+                key={r.id || `${r.experimentId}:${r.completedAt}`}
                 className="history-row"
               >
                 <SubjectBadge subject={exp.subject} />
@@ -84,6 +105,40 @@ export function Progress({ records }: { records: RecordEntry[] }) {
           Selesaikan satu eksperimen. Hasilnya akan tersimpan di sini.
         </EmptyState>
       )}
+      {(error || summaryError) && (
+        <p role="alert" className="form-error">
+          {error || summaryError}
+        </p>
+      )}
+      {account &&
+        initialRecords.length >= 50 &&
+        (summary ? offset < summary.attempts : true) && (
+          <button
+            className="button ghost"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                const next = await apiFetch<RecordEntry[]>(
+                  `/progress?offset=${offset}`,
+                );
+                setExtra((previous) => [...previous, ...next]);
+                setOffset((current) => current + 50);
+              } catch (e) {
+                setError(
+                  e instanceof Error
+                    ? e.message
+                    : "Riwayat belum dapat dimuat.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Muat riwayat berikutnya
+          </button>
+        )}
     </>
   );
 }

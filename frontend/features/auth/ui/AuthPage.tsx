@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { AuthGateway } from "../model";
 import { ApiError } from "@/shared/infrastructure/api";
+import { apiFetch } from "@/shared/infrastructure/api";
 
 export function Auth({
   onAuth,
@@ -135,7 +136,7 @@ export function Auth({
             lokal, bukan akun online.
           </p>
         )}
-        {mode === "register" && (
+        {mode === "register" && !gateway.configured && (
           <div className="role-toggle">
             <button
               aria-pressed={role === "student"}
@@ -166,15 +167,17 @@ export function Auth({
                   placeholder="Nama kamu"
                 />
               </label>
-              <label>
-                Kelas atau kelompok
-                <input
-                  required
-                  value={className}
-                  onChange={(e) => setClassName(e.target.value)}
-                  placeholder="Contoh: VIII A"
-                />
-              </label>
+              {!gateway.configured && (
+                <label>
+                  Kelas atau kelompok
+                  <input
+                    required
+                    value={className}
+                    onChange={(e) => setClassName(e.target.value)}
+                    placeholder="Contoh: VIII A"
+                  />
+                </label>
+              )}
             </>
           )}
           <label>
@@ -196,10 +199,12 @@ export function Auth({
               autoComplete={
                 mode === "register" ? "new-password" : "current-password"
               }
-              minLength={6}
+              minLength={gateway.configured ? 8 : 6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimal 6 karakter"
+              placeholder={
+                gateway.configured ? "Minimal 8 karakter" : "Minimal 6 karakter"
+              }
             />
           </label>
           {message && (
@@ -217,6 +222,31 @@ export function Auth({
                   : "Masuk"}
           </button>
         </form>
+        {gateway.configured && mode === "login" && (
+          <button
+            type="button"
+            className="button ghost full"
+            disabled={busy || !email}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const result = await apiFetch<{ message: string }>(
+                  "/auth/recover",
+                  { method: "POST", body: JSON.stringify({ email }) },
+                );
+                setMessage(result.message);
+              } catch (e) {
+                setMessage(
+                  e instanceof Error ? e.message : "Pemulihan belum tersedia.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Kirim tautan pemulihan kata sandi
+          </button>
+        )}
         <p className="auth-switch">
           {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
           <Link href={mode === "register" ? "/login" : "/register"}>

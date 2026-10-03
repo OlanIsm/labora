@@ -6,8 +6,12 @@ import {
   profileUpdate,
 } from "@backend/modules/identity/validation";
 import { apiFetch, ApiError } from "../shared/infrastructure/api";
+import { csvCell } from "../shared/infrastructure/download";
 
 async function main() {
+  assert.equal(csvCell('A,"B"'), '"A,""B"""');
+  assert.equal(csvCell('=HYPERLINK("bad")'), '"\'=HYPERLINK(""bad"")"');
+  assert.equal(csvCell(" \t+SUM(1,2)"), '"\' \t+SUM(1,2)"');
   const request = (body: string, headers: Record<string, string> = {}) =>
     new Request("http://localhost/api/v1/test", {
       method: "POST",

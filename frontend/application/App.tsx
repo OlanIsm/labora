@@ -9,7 +9,7 @@ import {
 } from "@/features/assignments/ui";
 import { Auth } from "@/features/auth/ui";
 import { Dashboard } from "@/features/dashboard/ui";
-import { experiments, getExperiment } from "@/features/experiments/index";
+import { useCatalog } from "@/features/experiments/index";
 import { Detail, ExperimentCard, Lab } from "@/features/experiments/ui";
 import type { Discipline } from "@/features/laboratory/model";
 import {
@@ -20,7 +20,7 @@ import {
   Sandbox,
 } from "@/features/laboratory/ui";
 import { Landing } from "@/features/marketing/ui";
-import { Progress, Result } from "@/features/progress/ui";
+import { Progress, Result, AccountResult } from "@/features/progress/ui";
 import { SettingsPage } from "@/features/settings/ui";
 import { resultPath } from "@/shared/routes";
 import { EmptyState } from "@/shared/ui/EmptyState";
@@ -31,6 +31,7 @@ import { useEffect } from "react";
 import { resolveRouteContext } from "./routeContext";
 import { applicationServices } from "./services";
 import { useApplicationState } from "./useApplicationState";
+import { AccountContext } from "@/shared/accountContext";
 
 export default function App() {
   const pathname = usePathname() || "/";
@@ -49,6 +50,11 @@ export default function App() {
     saveAssignment,
     complete,
   } = useApplicationState(applicationServices);
+  const {
+    experiments,
+    getExperiment,
+    error: catalogError,
+  } = useCatalog(user?.mode === "account");
   const { segments, isSandbox, isPublic, physicsSimulationId, experimentId } =
     resolveRouteContext(
       pathname,
@@ -78,19 +84,31 @@ export default function App() {
     );
   else if (pathname === "/settings")
     content = (
-      <SettingsPage user={user} onSave={saveProfile} onLogout={logout} />
+      <SettingsPage
+        user={user}
+        onSave={saveProfile}
+        onLogout={logout}
+        onRefresh={auth}
+      />
     );
   else if (
     isSandbox &&
     ["chemistry", "physics", "biology", "free"].includes(segments[1])
   )
     content = (
-      <Sandbox key={segments[1]} discipline={segments[1] as Discipline} />
+      <Sandbox
+        key={`${user?.id || user?.email || "guest"}:${segments[1]}`}
+        discipline={segments[1] as Discipline}
+      />
     );
   else if (pathname === "/fisika") content = <PhysicsSimulationList />;
   else if (physicsSimulation) {
     const Simulation = physicsSimulation.component;
-    content = <Simulation key={physicsSimulation.id} />;
+    content = (
+      <Simulation
+        key={`${user?.id || user?.email || "guest"}:${physicsSimulation.id}`}
+      />
+    );
   } else if (pathname === "/challenges")
     content = (
       <>
@@ -132,16 +150,22 @@ export default function App() {
   else if (segments[0] === "experiments" && exp)
     content = <Detail exp={exp} assignment={assignment} />;
   else if (segments[0] === "lab" && exp)
-    content = <Sandbox key={exp.subject} discipline={exp.subject} />;
+    content = (
+      <Sandbox
+        key={`${user?.id || user?.email || "guest"}:${exp.subject}`}
+        discipline={exp.subject}
+      />
+    );
   else if (segments[0] === "challenges" && segments[1] === "run" && exp)
     content = (
       <Lab
-        key={exp.id}
+        key={`${user?.id || user?.email || "guest"}:${exp.id}:${assignment?.id || "practice"}`}
         exp={exp}
         assignment={assignment}
         runtimes={applicationServices.runtimes}
-        onComplete={async (runtime) => {
-          await complete(exp, runtime);
+        accountId={user?.mode === "account" ? user.id : undefined}
+        onComplete={async (runtime, result) => {
+          await complete(exp, runtime, result);
           router.push(resultPath(exp.id));
         }}
       />
@@ -153,7 +177,17 @@ export default function App() {
         record={records.find((r) => r.experimentId === exp.id)}
       />
     );
-  else if (pathname === "/progress") content = <Progress records={records} />;
+  else if (pathname === "/progress" && search.get("result"))
+    content = (
+      <AccountResult
+        key={`${user?.id || "guest"}:${search.get("result")}`}
+        id={search.get("result")!}
+      />
+    );
+  else if (pathname === "/progress")
+    content = (
+      <Progress key={user?.id || user?.email || "guest"} records={records} />
+    );
   else if (pathname === "/assignments")
     content = <Assignments assignments={assignments} user={user} />;
   else if (segments[0] === "teacher" && user?.role !== "teacher")
@@ -167,12 +201,15 @@ export default function App() {
       </EmptyState>
     );
   else if (pathname === "/teacher/new")
-    content = <Builder onSave={saveAssignment} />;
+    content = (
+      <Builder onSave={saveAssignment} account={user?.mode === "account"} />
+    );
   else if (segments[0] === "teacher" && segments[1] === "results")
     content = (
       <AssignmentResults
         assignment={assignments.find((a) => a.id === segments[2])}
         records={records}
+        account={user?.mode === "account"}
       />
     );
   else if (pathname === "/teacher")
@@ -188,34 +225,49 @@ export default function App() {
       </EmptyState>
     );
   return (
-    <Shell
-      user={user}
-      assignments={assignments}
-      records={records}
-      onLogout={logout}
-      wide={segments[0] === "lab" || isSandbox || !!physicsSimulation}
-    >
-      {syncError && (
-        <div className="sync-error" role="alert">
-          <span>{syncError}</span>
-          <button
-            onClick={dismissSyncError}
-            className="icon-button"
-            aria-label="Tutup pesan"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      )}
-      {ready && (user || isPublic) ? (
-        content
-      ) : (
-        <div className="loading-page" role="status">
-          <FlaskConical size={34} />
-          <h2>Menyiapkan lab kamu...</h2>
-          <p>Alat dan eksperimen sedang dimuat.</p>
-        </div>
-      )}
-    </Shell>
+    <AccountContext.Provider value={user || {}}>
+      <Shell
+        user={user}
+        assignments={assignments}
+        records={records}
+        onLogout={logout}
+        wide={segments[0] === "lab" || isSandbox || !!physicsSimulation}
+      >
+        {syncError && (
+          <div className="sync-error" role="alert">
+            <span>{syncError}</span>
+            <button
+              onClick={dismissSyncError}
+              className="icon-button"
+              aria-label="Tutup pesan"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        )}
+        {catalogError && (
+          <p className="sync-error" role="alert">
+            Katalog belum tersinkron: {catalogError}
+          </p>
+        )}
+        {pathname === "/dashboard" &&
+          search.get("recovery") === "1" &&
+          user?.mode === "account" && (
+            <p role="status" className="sync-error">
+              Email pemulihan terverifikasi.{" "}
+              <Link href="/settings">Atur kata sandi baru di Settings</Link>.
+            </p>
+          )}
+        {ready && (user || isPublic) ? (
+          content
+        ) : (
+          <div className="loading-page" role="status">
+            <FlaskConical size={34} />
+            <h2>Menyiapkan lab kamu...</h2>
+            <p>Alat dan eksperimen sedang dimuat.</p>
+          </div>
+        )}
+      </Shell>
+    </AccountContext.Provider>
   );
 }

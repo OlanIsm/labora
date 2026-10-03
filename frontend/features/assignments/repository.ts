@@ -8,7 +8,7 @@ import type { Assignment } from "./model";
 export interface AssignmentRepository {
   listLocal(): Assignment[];
   loadRemote(user: User): Promise<Assignment[] | null>;
-  save(assignment: Assignment, user: User | null): Promise<void>;
+  save(assignment: Assignment, user: User | null): Promise<Assignment | void>;
 }
 
 export const assignmentRepository: AssignmentRepository = {
@@ -19,11 +19,22 @@ export const assignmentRepository: AssignmentRepository = {
   },
   async save(assignment, user) {
     if (canSync(user)) {
-      await apiFetch("/assignments", {
-        method: "POST",
-        body: JSON.stringify(assignment),
-      });
-      return;
+      const existing = assignment.revision !== undefined;
+      return apiFetch<Assignment>(
+        existing ? `/assignments/${assignment.id}` : "/assignments",
+        {
+          method: existing ? "PATCH" : "POST",
+          body: JSON.stringify({
+            experimentId: assignment.experimentId,
+            title: assignment.title,
+            instructions: assignment.instructions,
+            stages: assignment.stages,
+            schoolId: user!.schoolId,
+            dueAt: assignment.dueAt,
+            ...(existing ? { revision: assignment.revision } : {}),
+          }),
+        },
+      );
     }
     if (!isDemoUser(user))
       throw new ApiError(

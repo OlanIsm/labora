@@ -13,6 +13,12 @@ import OpticsCanvas from "./OpticsCanvas";
 import type { OpticsRenderState } from "./OpticsCanvas";
 import OpticsControls from "./OpticsControls";
 import type { OpticsControlsState } from "./OpticsControls";
+import { useSimulationSave } from "../../../../../application/useSimulationSave";
+import {
+  object,
+  numeric,
+  point,
+} from "../../../../../application/snapshotValidation";
 
 type CoachState = {
   objectCount: number;
@@ -103,10 +109,8 @@ const INITIAL_CONTROLS: OpticsControlsState = {
   focalLength: 10,
 };
 
-let objectIdCounter = 0;
 function nextObjectId(): string {
-  objectIdCounter += 1;
-  return `obj${objectIdCounter}`;
+  return `obj-${crypto.randomUUID()}`;
 }
 
 const DEFAULT_SIZES: Record<ObjectKind, number> = {
@@ -129,6 +133,37 @@ export default function OpticsPage() {
     },
   ]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const cloud = useSimulationSave(
+    "optics",
+    { controls, objects },
+    (v) => {
+      setControls(v.controls);
+      setObjects(v.objects);
+    },
+    (
+      v: unknown,
+    ): v is { controls: OpticsControlsState; objects: SceneObject[] } =>
+      object(v) &&
+      object(v.controls) &&
+      (v.controls.laserColorMode === "white" ||
+        numeric(v.controls.laserColorMode, 380, 780)) &&
+      typeof v.controls.imageFormationMode === "boolean" &&
+      numeric(v.controls.objectDistance, 0.01, 1000) &&
+      numeric(v.controls.focalLength, 0.01, 1000) &&
+      Array.isArray(v.objects) &&
+      v.objects.length <= 100 &&
+      v.objects.every(
+        (o) =>
+          object(o) &&
+          typeof o.id === "string" &&
+          ["mirror", "convexLens", "concaveLens", "prism", "screen"].includes(
+            String(o.kind),
+          ) &&
+          point(o.position) &&
+          numeric(o.rotationRad, -1000, 1000) &&
+          numeric(o.size, 0.01, 100),
+      ),
+  );
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [hasMovedObject, setHasMovedObject] = useState(false);
@@ -232,6 +267,7 @@ export default function OpticsPage() {
 
   return (
     <SimShell
+      cloud={cloud}
       title="Sandbox Laser & Lensa"
       explanation="Cermin mengubah arah sinar melalui pemantulan. Prisma membiaskan warna-warna cahaya dengan sudut berbeda. Lensa mengumpulkan atau menyebarkan sinar; letak benda terhadap fokus menentukan apakah bayangannya nyata atau maya. Coba geser jarak benda melewati titik fokus dan amati perubahan sifat bayangan."
       objective="Arahkan sinar dengan cermin, uraikan cahaya putih lewat prisma, lalu bandingkan bayangan nyata dan maya pada lensa."

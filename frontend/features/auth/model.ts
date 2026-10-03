@@ -1,4 +1,5 @@
 export type User = {
+  avatarUrl?: string;
   id?: string;
   mode?: "demo" | "account";
   schoolId?: string;

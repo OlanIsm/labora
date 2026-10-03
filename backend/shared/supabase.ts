@@ -2,6 +2,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { AppError } from "./errors";
+import type { Database } from "@contracts/database";
 import { supabaseConfiguration } from "./config";
 export { authConfiguration } from "./config";
 
@@ -9,7 +10,7 @@ export async function serverSupabase() {
   const config = supabaseConfiguration();
   if (!config) throw new AppError("NOT_CONFIGURED");
   const cookieStore = await cookies();
-  return createServerClient(config.url, config.key, {
+  return createServerClient<Database>(config.url, config.key, {
     cookieOptions: {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

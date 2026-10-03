@@ -7,11 +7,15 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/shared/infrastructure/api";
+import type { ClassRoom } from "@contracts/laboratory";
 
 export function Builder({
   onSave,
+  account = false,
 }: {
-  onSave: (a: Assignment) => Promise<void>;
+  onSave: (a: Assignment) => Promise<Assignment | void>;
+  account?: boolean;
 }) {
   const router = useRouter();
   const [experimentId, setExperimentId] = useState("acid-base");
@@ -23,6 +27,11 @@ export function Builder({
   const [stages, setStages] = useState<Assignment["stages"]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [classId, setClassId] = useState("");
+  const [publish, setPublish] = useState(false);
+  const [templateReady, setTemplateReady] = useState(!account);
+  const [savedDraft, setSavedDraft] = useState<Assignment | null>(null);
   const exp = getExperiment(experimentId)!;
   useEffect(() => {
     setStages(
@@ -35,7 +44,51 @@ export function Builder({
       })),
     );
   }, [exp]);
-  function update(i: number, key: "instruction" | "hint", value: string) {
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    setTemplateReady(false);
+    apiFetch<ClassRoom[]>("/classes")
+      .then((data) => {
+        if (active) setClasses(data);
+      })
+      .catch(() => {
+        if (active) setError("Daftar kelas belum dapat dimuat.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [account]);
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    apiFetch<typeof exp>(`/experiments/${exp.id}/authoring`)
+      .then((data) => {
+        if (!active) return;
+        setTemplateReady(true);
+        setStages(
+          data.steps.map((s) => ({
+            instruction: s.instruction,
+            hint: s.hint,
+            question: s.question?.prompt || "",
+            options: s.question?.options || [],
+            answer: s.question?.answer ?? 0,
+            explanation: s.question?.explanation || "",
+          })),
+        );
+      })
+      .catch(() => {
+        if (active) setError("Template penilaian belum dapat dimuat.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [account, exp]);
+  function update(
+    i: number,
+    key: "instruction" | "hint" | "question" | "explanation",
+    value: string,
+  ) {
     setStages((s) => s.map((x, j) => (j === i ? { ...x, [key]: value } : x)));
   }
   async function save(e: React.FormEvent) {
@@ -44,7 +97,8 @@ export function Builder({
     setError("");
     try {
       const a: Assignment = {
-        id: `assignment-${Date.now()}`,
+        id: savedDraft?.id || `assignment-${Date.now()}`,
+        ...(savedDraft ? { revision: savedDraft.revision } : {}),
         experimentId,
         title: title.trim(),
         instructions: instructions.trim(),
@@ -52,14 +106,42 @@ export function Builder({
         stages,
         createdAt: new Date().toISOString(),
       };
-      await onSave(a);
-      router.push(`/teacher/results/${a.id}`);
-    } catch {
-      setError("Tugas belum tersimpan. Periksa koneksi, lalu coba lagi.");
+      const saved = await onSave(a);
+      if (saved && account) setSavedDraft(saved);
+      const id = saved?.id || a.id;
+      if (account && publish)
+        await apiFetch(`/assignments/${id}/publish`, {
+          method: "POST",
+          body: JSON.stringify({
+            revision: saved?.revision ?? 0,
+            classIds: [classId],
+          }),
+        });
+      router.push(`/teacher/results/${id}`);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Tugas belum tersimpan. Periksa koneksi, lalu coba lagi.",
+      );
     } finally {
       setBusy(false);
     }
   }
+  if (!templateReady)
+    return (
+      <p role={error ? "alert" : "status"}>
+        {error || "Memuat template penilaian…"}
+        {error && (
+          <button
+            className="button ghost"
+            onClick={() => window.location.reload()}
+          >
+            Coba lagi
+          </button>
+        )}
+      </p>
+    );
   return (
     <>
       <Link className="back-link" href="/teacher">
@@ -93,12 +175,33 @@ export function Builder({
               </label>
               <label>
                 Kelas atau kelompok
-                <input
-                  required
-                  value={className}
-                  onChange={(e) => setClassName(e.target.value)}
-                  placeholder="Contoh: VIII A"
-                />
+                {account ? (
+                  <select
+                    value={classId}
+                    onChange={(e) => {
+                      setClassId(e.target.value);
+                      setClassName(
+                        classes.find((c) => c.id === e.target.value)?.name ||
+                          "",
+                      );
+                    }}
+                    required={publish}
+                  >
+                    <option value="">Pilih kelas untuk penerbitan</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    required
+                    value={className}
+                    onChange={(e) => setClassName(e.target.value)}
+                    placeholder="Contoh: VIII A"
+                  />
+                )}
               </label>
             </div>
             <label>
@@ -146,15 +249,75 @@ export function Builder({
                   </label>
                   {exp.steps[i]?.question && (
                     <div className="stage-question">
-                      <strong>{exp.steps[i].question?.prompt}</strong>
-                      <p>
-                        Jawaban:{" "}
-                        {
-                          exp.steps[i].question?.options[
-                            exp.steps[i].question?.answer
-                          ]
-                        }
-                      </p>
+                      <label>
+                        Penjelasan setelah menjawab
+                        <textarea
+                          maxLength={4000}
+                          value={s.explanation || ""}
+                          onChange={(e) =>
+                            update(i, "explanation", e.target.value)
+                          }
+                        />
+                      </label>
+                      <label>
+                        Pertanyaan
+                        <input
+                          required
+                          maxLength={500}
+                          value={s.question}
+                          onChange={(e) =>
+                            update(i, "question", e.target.value)
+                          }
+                        />
+                      </label>
+                      {s.options.map((option, optionIndex) => (
+                        <label key={optionIndex}>
+                          Pilihan {optionIndex + 1}
+                          <input
+                            required
+                            maxLength={300}
+                            value={option}
+                            onChange={(e) =>
+                              setStages((previous) =>
+                                previous.map((stage, stageIndex) =>
+                                  stageIndex === i
+                                    ? {
+                                        ...stage,
+                                        options: stage.options.map(
+                                          (value, index) =>
+                                            index === optionIndex
+                                              ? e.target.value
+                                              : value,
+                                        ),
+                                      }
+                                    : stage,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                      ))}
+                      <label>
+                        Jawaban benar
+                        <select
+                          value={s.answer}
+                          onChange={(e) =>
+                            setStages((previous) =>
+                              previous.map((stage, index) =>
+                                index === i
+                                  ? { ...stage, answer: Number(e.target.value) }
+                                  : stage,
+                              ),
+                            )
+                          }
+                        >
+                          {s.options.map((option, index) => (
+                            <option key={index} value={index}>
+                              {option || `Pilihan ${index + 1}`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                     </div>
                   )}
                 </div>
@@ -174,6 +337,30 @@ export function Builder({
             <p className="form-error" role="alert">
               {error}
             </p>
+          )}
+          {savedDraft && (
+            <Link href={`/teacher/results/${savedDraft.id}`}>
+              Periksa tugas yang tersimpan
+            </Link>
+          )}
+          {account && (
+            <>
+              <p>
+                Tugas disimpan sebagai draf sebelum diterbitkan. Siswa menerima
+                versi yang sudah diterbitkan.
+              </p>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={publish}
+                  onChange={(e) => setPublish(e.target.checked)}
+                />{" "}
+                Terbitkan untuk kelas yang dipilih
+              </label>
+              {!classes.length && (
+                <Link href="/settings">Buat kelas di pengaturan</Link>
+              )}
+            </>
           )}
           <button className="button primary full" type="submit" disabled={busy}>
             {busy ? "Menyimpan..." : "Simpan tugas"}

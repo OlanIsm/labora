@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ApplicationServices } from "./services";
 import { isDemoUser } from "@/shared/identity";
 import { ApiError } from "@/shared/infrastructure/api";
+import type { ResultDTO } from "@contracts/laboratory";
 
 export function useApplicationState(services: ApplicationServices) {
   const [user, setUser] = useState<User | null>(null);
@@ -17,6 +18,8 @@ export function useApplicationState(services: ApplicationServices) {
   const [ready, setReady] = useState(false);
   const [syncError, setSyncError] = useState("");
   const generation = useRef(0);
+  const identity = useRef(user);
+  identity.current = user;
 
   useEffect(() => {
     let active = true;
@@ -50,7 +53,7 @@ export function useApplicationState(services: ApplicationServices) {
       } catch {
         if (active && run === generation.current)
           setSyncError(
-            "Data sekolah belum tersinkron. Periksa koneksi; hasil lokal tetap tersedia.",
+            "Data sekolah belum tersinkron. Periksa koneksi, lalu muat ulang.",
           );
       }
     }
@@ -93,20 +96,42 @@ export function useApplicationState(services: ApplicationServices) {
   }
 
   async function saveProfile(updated: User) {
+    const run = generation.current;
     await services.auth.updateProfile(updated);
+    if (run !== generation.current) return;
     setUser(updated);
   }
 
   async function saveAssignment(assignment: Assignment) {
-    await services.assignments.save(assignment, user);
-    setAssignments(
-      isDemoUser(user)
-        ? services.assignments.listLocal()
-        : (await services.assignments.loadRemote(user!)) || [],
-    );
+    const run = generation.current;
+    const saved = await services.assignments.save(assignment, user);
+    if (run !== generation.current) return saved || assignment;
+    if (saved)
+      setAssignments((previous) => [
+        saved,
+        ...previous.filter((existing) => existing.id !== saved.id),
+      ]);
+    else if (isDemoUser(user)) setAssignments(services.assignments.listLocal());
+    return saved || assignment;
   }
 
-  async function complete(experiment: Experiment, runtime: Runtime) {
+  async function complete(
+    experiment: Experiment,
+    runtime: Runtime,
+    result?: ResultDTO,
+  ) {
+    if (user?.mode === "account" && result) {
+      if (identity.current?.id !== result.studentId)
+        throw new ApiError(
+          "UNAUTHENTICATED",
+          "Sesi akun sudah berubah. Buka kembali hasil lewat progres.",
+          401,
+        );
+      setRecords((previous) =>
+        [result, ...previous.filter((r) => r.id !== result.id)].slice(0, 50),
+      );
+      return;
+    }
     if (!isDemoUser(user))
       throw new ApiError(
         "FORBIDDEN",

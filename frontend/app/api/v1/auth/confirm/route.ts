@@ -5,7 +5,13 @@ export const GET = async (request: Request) => {
   const response = await apiHandler(confirm)(request);
   if (!response.ok) return response;
   const redirect = NextResponse.redirect(
-    new URL("/dashboard", process.env.APP_URL || request.url),
+    new URL(
+      new URL(request.url).searchParams.get("recovery") === "1" ||
+        new URL(request.url).searchParams.get("type") === "recovery"
+        ? "/dashboard?recovery=1"
+        : "/dashboard",
+      process.env.APP_URL || request.url,
+    ),
     303,
   );
   redirect.headers.set("X-Request-Id", response.headers.get("X-Request-Id")!);

@@ -26,6 +26,8 @@ import SubmarineCanvas from "./SubmarineCanvas";
 import type { SubmarineRenderState } from "./SubmarineCanvas";
 import SubmarineControls from "./SubmarineControls";
 import type { SubmarineControlsState } from "./SubmarineControls";
+import { useSimulationSave } from "../../../../../application/useSimulationSave";
+import { object, numeric } from "../../../../../application/snapshotValidation";
 
 type CoachState = {
   hasStarted: boolean;
@@ -138,6 +140,19 @@ const FLUID_COLORS: Record<string, string> = {
 
 export default function SubmarinePage() {
   const [controls, setControls] = useState(INITIAL_CONTROLS);
+  const cloud = useSimulationSave(
+    "submarine",
+    controls,
+    setControls,
+    (v: unknown): v is SubmarineControlsState =>
+      object(v) &&
+      numeric(v.ballastWaterFraction, 0, 1) &&
+      numeric(v.propellerForce, -100000, 100000) &&
+      numeric(v.challengeTargetDepth, 0, 1000) &&
+      typeof v.challengeMode === "boolean" &&
+      typeof v.fluidId === "string" &&
+      v.fluidId in FLUIDS,
+  );
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const reducedMotion = usePrefersReducedMotion();
@@ -264,6 +279,7 @@ export default function SubmarinePage() {
 
   return (
     <SimShell
+      cloud={cloud}
       title="Lab Kapal Selam"
       explanation="Air mendorong kapal ke atas, sementara berat menariknya ke bawah. Mengisi tangki pemberat menambah massa tanpa memperbesar kapal. Saat gaya apung dan berat seimbang serta geraknya mereda, kapal dapat melayang. Semakin dalam kapal berada, semakin besar tekanan cairan di sekitarnya."
       objective="Seimbangkan berat dan gaya apung agar kapal melayang di zona target selama 5 detik."

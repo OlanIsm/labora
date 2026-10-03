@@ -27,6 +27,7 @@ export type ApiErrorBody = {
 export type ApiResponse<T> = { data: T; requestId: string };
 
 export type AccountProfile = {
+  avatarUrl?: string;
   id: string;
   name: string;
   email: string;

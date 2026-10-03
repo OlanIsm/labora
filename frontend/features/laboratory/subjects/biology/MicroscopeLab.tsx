@@ -24,6 +24,7 @@ import {
 import type { MicroscopeSlide, SlideId } from "./microscope";
 import { microscopeGuide } from "./microscopeCoach";
 import MicroscopeField from "./MicroscopeField";
+import { useSimulationSave } from "../../application/useSimulationSave";
 
 function SlideGlass({ slide }: { slide: MicroscopeSlide }) {
   return (
@@ -125,6 +126,27 @@ function Viewport({
 
 export default function MicroscopeLab() {
   const [view, setView] = useState(INITIAL_MICROSCOPE);
+  const cloud = useSimulationSave(
+    "microscope",
+    view,
+    setView,
+    (v: unknown): v is typeof INITIAL_MICROSCOPE => {
+      if (!v || typeof v !== "object") return false;
+      const s = v as typeof INITIAL_MICROSCOPE;
+      return (
+        (s.slideId === null ||
+          microscopeSlides.some((x) => x.id === s.slideId)) &&
+        OBJECTIVES.includes(s.objective) &&
+        Number.isFinite(s.focus) &&
+        s.focus >= -10 &&
+        s.focus <= 10 &&
+        Number.isFinite(s.light) &&
+        s.light >= 10 &&
+        s.light <= 100
+      );
+    },
+    "biology",
+  );
   const [draggedId, setDraggedId] = useState<SlideId | null>(null);
   const [message, setMessage] = useState(
     "Mikroskop siap. Pilih preparat dari rak untuk mulai mengamati.",
@@ -189,6 +211,14 @@ export default function MicroscopeLab() {
       }}
     >
       <div className="microscope-lab">
+        {cloud.account && (
+          <p role="status">
+            {cloud.status}{" "}
+            <button className="button ghost small" onClick={cloud.reload}>
+              Muat simpanan akun
+            </button>
+          </p>
+        )}
         <div className="page-heading">
           <h1>Lab Biologi</h1>
           <p>

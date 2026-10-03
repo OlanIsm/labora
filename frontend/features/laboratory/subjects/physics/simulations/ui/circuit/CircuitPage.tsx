@@ -42,6 +42,12 @@ import CircuitCanvas from "./CircuitCanvas";
 import type { CircuitRenderState } from "./CircuitCanvas";
 import CircuitControls from "./CircuitControls";
 import type { CircuitControlsState } from "./CircuitControls";
+import { useSimulationSave } from "../../../../../application/useSimulationSave";
+import {
+  object,
+  numeric,
+  point,
+} from "../../../../../application/snapshotValidation";
 
 const QUIZ_QUESTIONS = [
   {
@@ -106,6 +112,46 @@ export default function CircuitPage() {
   const [message, setMessage] = useState("");
   const [reducedMotion, setReducedMotion] = useState(false);
   const nextId = useRef(0);
+  const cloud = useSimulationSave(
+    "circuit",
+    { controls, components },
+    (v) => {
+      setControls(v.controls);
+      setComponents(v.components);
+      nextId.current = Date.now();
+    },
+    (
+      v: unknown,
+    ): v is { controls: CircuitControlsState; components: PlacedComponent[] } =>
+      object(v) &&
+      object(v.controls) &&
+      typeof v.controls.presetId === "string" &&
+      typeof v.controls.showMeters === "boolean" &&
+      Array.isArray(v.components) &&
+      v.components.length <= 200 &&
+      v.components.every(
+        (c) =>
+          object(c) &&
+          typeof c.id === "string" &&
+          typeof c.kind === "string" &&
+          c.kind in COMPONENT_NAMES &&
+          object(c.from) &&
+          numeric(c.from.col, 0, 200) &&
+          numeric(c.from.row, 0, 200) &&
+          object(c.to) &&
+          numeric(c.to.col, 0, 200) &&
+          numeric(c.to.row, 0, 200) &&
+          Object.entries(c).every(
+            ([k, value]) =>
+              ![
+                "voltage",
+                "resistance",
+                "fuseRatingAmps",
+                "maxPowerWatts",
+              ].includes(k) || numeric(value, 0, 100000),
+          ),
+      ),
+  );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -356,6 +402,7 @@ export default function CircuitPage() {
         }}
       >
         <SimShell
+          cloud={cloud}
           title="Simulator Rangkaian Seri & Paralel"
           curriculumBadge="SMP 9 · SMA 12"
           explanation="Baterai mendorong arus melalui jalur tertutup. Dalam rangkaian seri, arus melewati setiap komponen secara berurutan dan hambatannya dijumlahkan. Dalam rangkaian paralel, arus terbagi ke beberapa cabang dengan tegangan yang sama. Terang lampu mengikuti daya listriknya; saklar terbuka menghentikan arus di jalurnya."

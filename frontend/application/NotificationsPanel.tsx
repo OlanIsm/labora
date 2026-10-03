@@ -19,6 +19,7 @@ export function NotificationsPanel({
   onRead,
   onReadAll,
   onClose,
+  error,
 }: {
   notifications: AppNotification[];
   readIds: string[];
@@ -26,6 +27,7 @@ export function NotificationsPanel({
   onRead: (id: string) => void;
   onReadAll: () => void;
   onClose: () => void;
+  error?: string;
 }) {
   const unread = notifications.filter(
     (notification) => !readIds.includes(notification.id),
@@ -53,6 +55,11 @@ export function NotificationsPanel({
         )
       }
     >
+      {error && (
+        <p role="alert" className="form-error">
+          {error}
+        </p>
+      )}
       {notifications.length ? (
         <div className="header-notifications">
           {notifications.map((notification) => {

@@ -5,15 +5,19 @@ import { CheckCircle2, LogOut, Save, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { isDemoUser } from "@/shared/identity";
+import { EnrollmentSettings } from "@/features/auth/ui";
+import { apiFetch } from "@/shared/infrastructure/api";
 
 export default function SettingsPage({
   user,
   onSave,
   onLogout,
+  onRefresh,
 }: {
   user: User | null;
   onSave: (user: User) => Promise<void>;
   onLogout: () => Promise<void>;
+  onRefresh?: (user: User) => void;
 }) {
   const [name, setName] = useState(user?.name || "");
   const [className, setClassName] = useState(user?.className || "");
@@ -125,6 +129,13 @@ export default function SettingsPage({
               </button>
             </form>
           </section>
+          {user.mode === "account" && onRefresh && (
+            <EnrollmentSettings user={user} onRefresh={onRefresh} />
+          )}
+          {user.mode === "account" && <PasswordSettings />}
+          {user.mode === "account" && onRefresh && (
+            <AvatarSettings onRefresh={onRefresh} />
+          )}
           <section className="settings-section settings-session">
             <div>
               <h2>Sesi akun</h2>
@@ -153,5 +164,100 @@ export default function SettingsPage({
         </section>
       )}
     </div>
+  );
+}
+
+function PasswordSettings() {
+  const [password, setPassword] = useState(""),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState("");
+  return (
+    <section className="settings-section">
+      <h2>Kata sandi</h2>
+      <form
+        className="settings-form"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setMessage("");
+          try {
+            await apiFetch("/auth/password", {
+              method: "POST",
+              body: JSON.stringify({ password }),
+            });
+            setPassword("");
+            setMessage("Kata sandi berhasil diubah.");
+          } catch (e) {
+            setMessage(
+              e instanceof Error ? e.message : "Kata sandi belum berubah.",
+            );
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          Kata sandi baru
+          <input
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            maxLength={72}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        {message && <p role="status">{message}</p>}
+        <button className="button primary" disabled={busy}>
+          Ubah kata sandi
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function AvatarSettings({ onRefresh }: { onRefresh: (user: User) => void }) {
+  const [busy, setBusy] = useState(false),
+    [message, setMessage] = useState("");
+  return (
+    <section className="settings-section">
+      <h2>Foto profil</h2>
+      <p>PNG, JPEG, atau WebP. Maksimal 2 MB.</p>
+      <label>
+        Unggah foto
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          disabled={busy}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            if (file.size > 2097152) {
+              setMessage("Ukuran foto maksimal 2 MB.");
+              return;
+            }
+            setBusy(true);
+            try {
+              const form = new FormData();
+              form.set("avatar", file);
+              const user = await apiFetch<User>("/me/avatar", {
+                method: "POST",
+                body: form,
+              });
+              onRefresh(user);
+              setMessage("Foto profil tersimpan.");
+            } catch (e) {
+              setMessage(
+                e instanceof Error ? e.message : "Foto belum dapat diunggah.",
+              );
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+      </label>
+      {message && <p role="status">{message}</p>}
+    </section>
   );
 }

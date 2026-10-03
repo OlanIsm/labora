@@ -24,6 +24,8 @@ import ProjectileCanvas from "./ProjectileCanvas";
 import type { ProjectileRenderState } from "./ProjectileCanvas";
 import ProjectileControls from "./ProjectileControls";
 import type { ProjectileControlsState } from "./ProjectileControls";
+import { useSimulationSave } from "../../../../../application/useSimulationSave";
+import { object, numeric } from "../../../../../application/snapshotValidation";
 
 type CoachState = {
   hasLaunched: boolean;
@@ -120,6 +122,21 @@ function usePrefersReducedMotion(): boolean {
 
 export default function ProjectilePage() {
   const [controls, setControls] = useState(INITIAL_CONTROLS);
+  const cloud = useSimulationSave(
+    "projectile",
+    controls,
+    setControls,
+    (v: unknown): v is ProjectileControlsState =>
+      object(v) &&
+      numeric(v.angleDeg, 0, 90) &&
+      numeric(v.speed, 1, 100) &&
+      numeric(v.mass, 0.01, 1000) &&
+      typeof v.dragEnabled === "boolean" &&
+      typeof v.planetId === "string" &&
+      v.planetId in PLANETS &&
+      numeric(v.levelIndex, 0, PROJECTILE_LEVELS.length - 1) &&
+      Number.isInteger(v.levelIndex),
+  );
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const reducedMotion = usePrefersReducedMotion();
@@ -264,6 +281,7 @@ export default function ProjectilePage() {
 
   return (
     <SimShell
+      cloud={cloud}
       title="Meriam & Target"
       explanation="Bola bergerak ke depan sekaligus naik dan turun. Gravitasi terus mengurangi kecepatan ke atas sampai bola mulai jatuh. Hambatan udara melawan gerak dan biasanya memperpendek jangkauan. Ubah satu slider, lalu bandingkan hasil tembakan."
       objective="Temukan sudut dan kecepatan yang membuat bola mengenai target. Bandingkan lintasan dengan dan tanpa hambatan udara."

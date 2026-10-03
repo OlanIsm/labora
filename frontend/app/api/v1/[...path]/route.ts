@@ -1,8 +1,4 @@
-import { AppError } from "@backend/shared/errors";
-import { apiHandler } from "@backend/shared/http";
-const missing = apiHandler(async () => {
-  throw new AppError("NOT_FOUND");
-});
+import { handleRequest as missing } from "@backend/router";
 export {
   missing as GET,
   missing as POST,

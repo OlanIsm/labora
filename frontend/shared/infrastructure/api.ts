@@ -39,7 +39,9 @@ export async function apiFetch<T>(
       signal,
       headers: {
         Accept: "application/json",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.body && !(options.body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...Object.fromEntries(new Headers(options.headers)),
       },
     });

@@ -22,6 +22,7 @@ export default function SimShell({
   objective,
   interactionHint,
   explanation,
+  cloud,
 }: {
   title: string;
   curriculumBadge: string;
@@ -39,12 +40,34 @@ export default function SimShell({
   objective: string;
   interactionHint: string;
   explanation: string;
+  cloud?: {
+    account: boolean;
+    ready: boolean;
+    status: string;
+    reload: () => void;
+    recoverDraft?: () => void;
+  };
 }) {
   const [formulaOpen, setFormulaOpen] = useState(false);
   const formulaId = useId();
   const [guideVisible, setGuideVisible] = useState(true);
+  if (cloud?.account && !cloud.ready)
+    return <p role="status">Memuat simpanan simulasi…</p>;
   return (
     <div className="sim-shell">
+      {cloud?.account && (
+        <p role="status">
+          {cloud.status}{" "}
+          <button className="button ghost small" onClick={cloud.reload}>
+            Muat simpanan akun
+          </button>
+          {cloud.recoverDraft && (
+            <button className="button ghost small" onClick={cloud.recoverDraft}>
+              Pulihkan draf konflik
+            </button>
+          )}
+        </p>
+      )}
       <div className="sim-heading">
         <div>
           <span className="sim-badge">{curriculumBadge}</span>
