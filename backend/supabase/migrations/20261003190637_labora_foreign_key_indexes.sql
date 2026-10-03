@@ -5,4 +5,3 @@ CREATE INDEX experiments_current_version_identity ON public.experiments USING bt
 CREATE INDEX sessions_assignment_experiment ON public.lab_sessions USING btree (assignment_version_id, experiment_version_id);
 
 CREATE INDEX sessions_assignment_student ON public.lab_sessions USING btree (assignment_version_id, student_id);
-
