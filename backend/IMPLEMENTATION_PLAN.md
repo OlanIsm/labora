@@ -1,6 +1,6 @@
 # Labora: backend and database implementation plan
 
-Status: proposed for review. This document does not create tables, apply migrations, or change application behavior.
+Status: implementation authorized on 2026-10-03 following the requested plan revisions. Remote schema changes still require successful Phase 0 inventory; do not overwrite unknown existing data. V1 covers Phases 0–4; V2 covers Phases 5–7.
 
 ## 1. Existing application
 
@@ -41,12 +41,12 @@ backend/
     migrations/
     seed.sql
   tests/              Authorization, transactions and workflow integration tests
-packages/
+shared/
   experiment-engine/  Pure shared transitions and scientific calculations
   contracts/          Public request/response types and validation contracts
 ```
 
-Only move pure logic that actually needs to run on both sides. Do not import React, browser storage, Supabase clients, or private answer keys into the shared engine. Extend the current architecture checker to enforce these boundaries and prevent server secrets from entering client bundles.
+Use TypeScript path aliases `@backend/*` and `@contracts/*` first; no workspace packages or package publishing. Add an engine alias only when shared execution needs it. Only move pure logic that actually needs to run on both sides. Do not import React, browser storage, Supabase clients, or private answer keys into the shared engine. Extend the current architecture checker to enforce these boundaries and prevent server secrets from entering client bundles.
 
 Use existing Supabase JS, add `@supabase/ssr` for cookie sessions, and pin dependency versions. Use SQL migrations and generated database types. No additional ORM is needed for this architecture.
 
@@ -126,11 +126,45 @@ Avatar uploads use Supabase Storage with user-owned paths, image MIME/size limit
 
 ## 5. API contract
 
-All application endpoints live under `/api/v1`. Use consistent error responses, bounded pagination, payload validation, session checks, appropriate status codes, request IDs, origin checks for cookie-authenticated mutations, and rate limits on sensitive/expensive operations. Authentication SDK operations use Supabase Auth rather than a custom password store.
+All application endpoints live under `/api/v1`. Use bounded pagination, payload validation, session checks, appropriate status codes, request IDs, origin checks for cookie-authenticated mutations, and rate limits on sensitive/expensive operations. The frontend sends auth commands to API endpoints; the backend uses the Supabase Auth SDK rather than a custom password store. Supabase SDK imports are server-only after migration.
+
+### Error contract: defined before implementation
+
+Success responses use `{ "data": ..., "requestId": "..." }`. Errors use the following shared contract, including failures returned by middleware:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Periksa data yang kamu kirim.",
+    "fieldErrors": { "email": ["Isi email yang valid."] },
+    "retryable": false
+  },
+  "requestId": "server-generated-uuid"
+}
+```
+
+`fieldErrors` is optional. Messages are safe Indonesian text; codes are stable identifiers. Include `X-Request-Id` on every API response. Never return SQL, stack traces, raw auth provider errors, credentials or internal table names.
+
+| HTTP | Code | Client behavior |
+| --- | --- | --- |
+| 400 | `BAD_REQUEST` | Correct malformed JSON/request shape; do not retry automatically |
+| 401 | `UNAUTHENTICATED` / `INVALID_CREDENTIALS` | Expired session requires login; failed login stays on the form |
+| 403 | `FORBIDDEN` | Show access explanation; never downgrade to a local school account |
+| 404 | `NOT_FOUND` | Show missing/inaccessible resource without disclosing another user's data |
+| 409 | `REVISION_CONFLICT` / `IDEMPOTENCY_CONFLICT` | Preserve draft; fetch canonical session and reconcile |
+| 413 | `PAYLOAD_TOO_LARGE` | Reduce snapshot/file size |
+| 415 | `UNSUPPORTED_MEDIA_TYPE` | Use supported request/upload format |
+| 422 | `VALIDATION_ERROR` | Map `fieldErrors` to form controls |
+| 429 | `RATE_LIMITED` | Respect `Retry-After`; preserve input |
+| 503 | `SERVICE_UNAVAILABLE` / `NOT_CONFIGURED` | Show connection/setup failure; preserve draft and allow retry |
+| 500 | `INTERNAL_ERROR` | Show generic failure with request ID; no blind mutation retries |
+
+Network failure, timeout and cancellation have separate client error codes. Retry transient reads with bounded backoff; retry mutations only with the same idempotency event ID. An educationally incorrect laboratory action returns a successful validated outcome (`accepted: false`, feedback), rather than an infrastructure error.
 
 | Area | Endpoints / operations |
 | --- | --- |
-| Identity | `GET/PATCH /me`; auth confirmation/callback, password recovery and logout; avatar upload |
+| Identity | `GET /auth/config`; `POST /auth/login`, `/auth/register`, `/auth/logout`, `/auth/recover`; auth confirmation/callback; `GET/PATCH /me`; avatar upload |
 | Enrollment | Create school/workspace; list memberships; create/revoke/accept invitations |
 | Classes | `GET/POST /classes`; manage owned class membership and archive a class |
 | Catalog | `GET /experiments`; `GET /experiments/:id`; versioned public definitions |
@@ -169,24 +203,71 @@ Default assignment reporting uses the highest completed eligible attempt, with a
 - Inspect remote tables and data before migration. Preserve legacy assignments/results, map identities and class memberships, and flag records that cannot be safely mapped. Names alone cannot establish ownership.
 - Preserve existing experiment URLs and IDs. Result adapters support the current latest-result route while new attempt-specific result IDs retain full history.
 
-## 8. Implementation sequence and review gates
+## 8. Frontend Migration
 
-| Phase | Work | Completion evidence |
-| --- | --- | --- |
-| 0. Review and remote inventory | Review this schema proposal; read live schema/policies, project config and existing data without mutation | Confirmed migration inventory and approved schema decisions before SQL is applied |
-| 1. Backend foundation | Wire workspace packages, Route Handler adapters, validation/errors, cookie sessions, server-only clients and architecture checks | Authenticated API request works; forged/local/demo identity cannot access school data |
-| 2. Identity and classroom schema | Profiles, schools, memberships, classes, invitations, constraints and RLS | Two separate schools cannot read/write each other's data; enrollment and role escalation tests pass |
-| 3. Catalog and versioning | Seed nine experiments; public definitions/private answer keys; shared pure engine | All three subjects load; answer keys absent from catalog responses/client bundle; old sessions retain their definition version |
-| 4. Sessions and assessment | Guided actions/answers, immutable scoring, submission transactions and sandbox snapshot persistence | Acid/Base, Ohm's Law and microscope activities complete with server-generated results; invalid actions, duplicate requests and concurrent writes are handled |
-| 5. Teacher activities | Builder stage validation, draft editing, publication, targets/recipients and report queries | Teacher creates/publishes a task; eligible students receive it; unauthorized students cannot access it; reports match stored responses |
-| 6. App integration | Dashboard, history, continue activity, notes, settings/avatar and persistent notifications | Work continues across two browsers/devices; teacher sees assignment results; logout isolates the next user's cache |
-| 7. Migration and release | Reviewed migrations, legacy-data conversion, production config, advisors, backup/restore procedure and operational logs | Migrations reproduce schema from scratch; authorization/flow tests, TypeScript and production build pass; migration verification and recovery steps documented |
+This is a dedicated implementation workstream, not a final wiring task. API replacement includes asynchronous state, identity/ID changes, error handling, cache ownership, protected grading and existing browser flows.
+
+### Inventory and effort
+
+| Current code / feature | Migration work | Effort | Release dependency |
+| --- | --- | --- | --- |
+| `auth/infrastructure/sessionRepository.ts`, `auth/model.ts`, Auth UI | Replace `getUser/signUp/signInWithPassword/signOut/updateUser` with auth and `/me` API calls; identity gains UUID and memberships. Keep explicit demo profiles separate. | M | Phase 1–2, V1 |
+| `assignments/repository.ts`, builder/list/results UI | Replace table select/insert with typed API; replace generated timestamp IDs and class-name targets with returned IDs, versions, recipient targets; saving a draft and publishing become distinct operations. | L | Phase 5, V2 |
+| `progress/repository.ts`, `createRecord.ts`, result/progress UI | Replace select/upsert with progress/results queries; authenticated completion calls session submit. Local score generation is demo-only. Include attempt/result IDs and pagination. | L | Phase 4, V1; teacher aggregation V2 |
+| `experiments/repository.ts`, `useGuidedExperiment.ts`, `GuidedLab.tsx` | Replace synchronous experiment-key runtime storage with asynchronous session load/actions/answers/submit; canonical revision, in-flight state, queued actions, error recovery and retry/reset policy. | L | Phase 3–4, V1 |
+| `experiments/domain/definitions.ts`, catalog cards/detail/visuals | Fetch public versioned definitions. Separate private keys/scoring from client imports. Allow fixtures only in explicit demo mode. | L | Phase 3, V1 |
+| `application/services.ts`, `useApplicationState.ts`, `App.tsx` | Wire API/demo adapters; replace local-first school data bootstrap and whole-array refresh with scoped async loading; abort obsolete requests on account/route changes. | L | Every V1/V2 slice |
+| `DashboardPage.tsx` | Replace synchronous runtime scanning with session/summary API reads. Loading/error/empty are distinct states. Use memberships/recipients instead of filtering by class name. | M | Basic student flow Phase 4; full summary Phase 6 |
+| `laboratory/application/useSandbox.ts`, `labRepository.ts`, physics/biology save adapters | Keep simulation loops local; add account-bound cloud session snapshots, debounced saves, revision conflicts, dirty/pending indicators and notebooks. | L | Basic snapshots Phase 4; subject-specific saves/notes Phase 6 |
+| `SettingsPage.tsx`, `AppHeader.tsx`, notifications/profile menu | `/me` profile/preferences; avatar API; server notifications/read state replace synthesized assignment/result notifications. | M | Profile Phase 2; avatars/notifications Phase 6 |
+| `shared/infrastructure/supabase.ts`, `cloudSession.ts` | Remove client SDK/table access after dependent slices migrate. A single API transport owns envelopes, aborts and safe errors; demo detection must be explicit, not authorization by email prefix. | M | Transport Phase 1; removal gate before V2 release |
+
+M/L are relative scope, not deadlines. The largest frontend tasks are guided sessions, shared application state, assignment builder/reporting and sandbox synchronization. Their effort is included in the timeline below.
+
+### Migration order and compatibility
+
+1. Define shared DTOs/error contracts; implement one `apiFetch` transport and explicit API/demo adapter selection at the composition layer. Reuse existing narrow repository ports where semantics still match.
+2. Migrate auth and profile end-to-end, including session expiry/account switching. Browser data cannot restore an authenticated identity after API authentication fails.
+3. Migrate the public catalog and start/resume session flow. Adapt current pages through frontend view models, not copies of the database schema.
+4. Complete one Acid/Base vertical slice: actions → answer → submit → result → progress. Then migrate Ohm's Law, microscope and remaining guided experiments using the same contracts. V1 is not complete with backend-only tests.
+5. Migrate sandbox saves separately from animation state. Do not turn synchronous rendering reducers into network reducers or autosave every animation frame.
+6. In V2, migrate assignment drafts/publication/targets and teacher results together, then notebooks, notifications, avatars and remaining simulation save adapters.
+7. Remove superseded cloud repositories and client Supabase imports. Extend architecture checks to fail on `@supabase/*` imports in browser feature code and imports from server modules outside server adapters.
+
+V1 deployment exposes migrated student flows. Teacher assignment creation/reporting stays explicitly demo-only until Phase 5 API integration is complete; it must not write to legacy cloud tables using the old policies. No implicit fallback from a failed authenticated request to demo storage, no dual writes to old/new result tables, and no UI success before authoritative publication/submission succeeds.
+
+Old URLs remain valid through explicit ID-to-view adapters. After a successful mutation, update from its server response and invalidate only affected reads. Cache keys include authenticated UUID, school context, resource/session ID and version. Use abort controllers plus identity-generation checks so a previous account's slow response cannot populate the next account's UI.
+
+### Frontend acceptance gates
+
+- Every migrated feature is tested through its actual API contract, including validation errors, expiry, forbidden access, network loss and stale revisions.
+- Real-user E2E tests create independent sessions in two browsers and verify cross-device resume and server results; demo browser tests remain separate and cannot stand in for backend integration tests.
+- Exercise a delayed request followed by logout/login to verify identity isolation, failed/retried submission, return visits, expired invitations and unauthorized teacher routes.
+- Verify drag/drop and click-to-place, mobile inventory, sidebar overlays and existing URL behavior remain functional.
+- Audit the final client bundle: no private answer keys, privileged credentials, database writes or imported backend runtime code.
+
+## 9. Implementation sequence, timeline and release gates
+
+Planning estimate: 19–27 focused engineering days, sequential work by one engineer, including the frontend migrations and meaningful testing. This is an effort forecast, not a calendar guarantee. Phase 0 may revise it after live database and legacy-data inventory. External auth/project access and review waits are excluded. Each phase includes its matching frontend vertical slice rather than postponing all frontend work to Phase 6.
+
+| Phase | Release | Effort | Work | Completion evidence |
+| --- | --- | --- | --- | --- |
+| 0. Review and remote inventory | V1 | 1 day | Read live schema/policies/project config; inventory client access, legacy records and migration assumptions; finalize contracts | Confirmed inventory before SQL is applied |
+| 1. Backend foundation | V1 | 2–3 days | Path aliases, HTTP adapters, shared errors/API client, cookie auth, server-only guards and auth frontend migration | Verified auth request; forged/local/demo identity rejected; contract tests pass |
+| 2. Identity and classroom schema | V1 | 2–3 days | Profiles, schools, memberships, classes, invitations, constraints/RLS, profile/enrollment integration | Cross-school isolation, role escalation and enrollment tests pass |
+| 3. Catalog and versioning | V1 | 2–3 days | Seed nine experiments, versioned public DTOs/private keys, catalog frontend and shared pure logic | All subjects load through API; keys absent from client bundle; version pinning works |
+| 4. Sessions and assessment | V1 | 4–5 days | Guided-session frontend migration, grading/submission, history/continue flow, basic sandbox snapshots | Three flagship flows and remaining guided activities persist; duplicate/stale requests handled; real-user E2E passes |
+| 5. Teacher activities | V2 | 3–4 days | Assignment builder/list/results migration, drafts/publication, targets/recipients, teacher reports | Actual API-backed teacher → student → results flow passes |
+| 6. App integration | V2 | 3–5 days | Full dashboard aggregation, subject save adapters, notes, settings/avatar and persistent notifications | Two-device workflows pass; account switching is isolated; all direct client Supabase access removed |
+| 7. Migration and release | V2 | 2–3 days | Legacy-data conversion, reviewed migrations, production configuration, advisors, recovery and operations | Reproducible schema; authorization/flow checks and production build pass; recovery documented |
+
+V1 forecast: 11–15 days. V2 forecast: 8–12 additional days. V1 has its own production gate: tested migrations, RLS checks, real auth/catalog/session/results integration, no private keys in the client, and a passing production build. Phase 7 adds the full V2/legacy migration release gate; it does not defer V1 security/testing until V2.
 
 Each phase has runnable tests for meaningful risks. Priority tests cover cross-user/cross-school access, role escalation, class impersonation, guessed session/assignment IDs, answer-key disclosure, score tampering, duplicate publication/submission, stale revisions, version pinning, account switching and the full student/teacher workflow.
 
-Use Supabase local development for migrations/tests where available. Inspect database security advisors before release. Apply reviewed migrations to the requested project only after the user's schema review; installing MCP access is not an instruction to run this schema now.
+Use Supabase local development for migrations/tests where available. Inspect database security advisors before each release. The user has authorized starting this revised plan; inspect the requested project and review the concrete migration against its existing schema before applying it. Never reset or overwrite unknown remote data to resolve migration conflicts.
 
-## 9. Expected delivery
+## 10. Expected delivery
 
 - Backend modules and typed HTTP contracts integrated with the existing app.
 - Reproducible database migrations, seed content, RLS/storage policies and generated types.
