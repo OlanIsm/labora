@@ -1,3 +1,5 @@
+import App from "@/application/App";
+import { Suspense } from "react";
 import "../features/laboratory/subjects/chemistry/chemistry.css";
 import "../features/laboratory/subjects/physics/physics.css";
 import "./physics-sims.css";
@@ -21,7 +23,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <App />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

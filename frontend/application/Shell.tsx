@@ -37,7 +37,7 @@ export function Shell({
   const [expanded, setExpanded] = useState(false);
   const [pinned, setPinned] = useState(false);
   useEffect(() => {
-    // Keep a selected sidebar open when Next.js remounts the page after navigation.
+    // Restore the selected sidebar after a full page reload.
     try {
       const selected =
         sessionStorage.getItem("labora-sidebar-pinned") === "true";
@@ -148,6 +148,7 @@ export function Shell({
             <Link
               key={n.href}
               href={n.href}
+              prefetch={true}
               aria-current={active(n.href) ? "page" : undefined}
               className={active(n.href) ? "active" : ""}
               aria-label={n.label}
@@ -161,6 +162,7 @@ export function Shell({
         </nav>
         <Link
           href="/settings"
+          prefetch={true}
           className="sidebar-profile"
           aria-label="Buka pengaturan akun"
           title="Pengaturan akun"
@@ -192,6 +194,7 @@ export function Shell({
           <Link
             key={n.href}
             href={n.href}
+            prefetch={true}
             aria-current={active(n.href) ? "page" : undefined}
             className={active(n.href) ? "active" : ""}
           >
