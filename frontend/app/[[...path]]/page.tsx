@@ -1,2 +1,4 @@
-import App from '@/components/App';
-export default function Page() { return <App />; }
+import App from "@/application/App";
+export default function Page() {
+  return <App />;
+}

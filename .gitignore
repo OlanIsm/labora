@@ -1,6 +1,6 @@
 # Dependencies and generated files
 node_modules/
-.next/
+.next*/
 /frontend/out/
 coverage/
 *.tsbuildinfo

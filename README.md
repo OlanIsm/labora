@@ -4,7 +4,7 @@ Labora is a virtual science laboratory with nine guided experiments, quizzes, pr
 
 ## Project structure
 
-- `frontend/` — Next.js app, simulation engine, and `public/` for future images and other assets.
+- `frontend/` — Next.js modular monolith, feature-owned simulation engines, and `public/` assets.
 - `backend/` — Supabase database schema and setup guidance. Supabase hosts authentication and shared data; no separate Node server is required.
 
 ## Run locally
@@ -15,7 +15,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. The public landing page leads to login or signup. Use the student or teacher demo option on `/login` to enter the app without Supabase. Demo data remains in this browser.
+Open http://localhost:3000. Landing-page app entry buttons open `/dashboard`. Login and signup remain available; use the student or teacher demo option on `/login` without Supabase. Demo data remains in this browser.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for module ownership, public APIs, SOLID contracts, and dependency rules.
 
 ## Shared school data
 
@@ -25,6 +27,8 @@ Follow [`backend/README.md`](backend/README.md) to connect Supabase. Credentials
 
 ```bash
 cd frontend
+npm run check
 npm test
+npm run test:ui
 npm run build
 ```

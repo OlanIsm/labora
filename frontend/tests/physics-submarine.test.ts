@@ -8,8 +8,11 @@ import {
   submergedVolumeFraction,
   totalMass,
   weightForce,
-} from "../lib/physics-sims/submarine/engine";
-import { FLUIDS, PLANETS } from "../lib/physics-sims/shared/config";
+} from "../features/laboratory/subjects/physics/simulations/domain/submarine/engine";
+import {
+  FLUIDS,
+  PLANETS,
+} from "../features/laboratory/subjects/physics/simulations/domain/shared/config";
 
 const EARTH_G = PLANETS.earth.gravity;
 const HULL_HEIGHT = 4; // m
@@ -54,7 +57,10 @@ const HULL_VOLUME = 20; // m^3
   const state = { depthBelowSurface: 10, velocity: 0, ballastWaterFraction: 0 };
   const weight = weightForce(state, params);
   const buoyancy = buoyancyForce(state, params, HULL_HEIGHT);
-  assert.ok(weight > buoyancy, "denser-than-fluid sub should have weight > buoyancy");
+  assert.ok(
+    weight > buoyancy,
+    "denser-than-fluid sub should have weight > buoyancy",
+  );
   assert.equal(classifyStatus(weight - buoyancy, 0), "sinking");
 }
 
@@ -73,7 +79,10 @@ const HULL_VOLUME = 20; // m^3
   const state = { depthBelowSurface: 10, velocity: 0, ballastWaterFraction: 0 };
   const weight = weightForce(state, params);
   const buoyancy = buoyancyForce(state, params, HULL_HEIGHT);
-  assert.ok(buoyancy > weight, "lighter-than-fluid sub should have buoyancy > weight");
+  assert.ok(
+    buoyancy > weight,
+    "lighter-than-fluid sub should have buoyancy > weight",
+  );
   assert.equal(classifyStatus(weight - buoyancy, 0), "floating");
 }
 
@@ -92,18 +101,37 @@ const HULL_VOLUME = 20; // m^3
     hullMass: lightMass,
     surfaceY: 0,
   };
-  const emptyBallast = { depthBelowSurface: 10, velocity: 0, ballastWaterFraction: 0 };
-  const fullBallast = { depthBelowSurface: 10, velocity: 0, ballastWaterFraction: 1 };
+  const emptyBallast = {
+    depthBelowSurface: 10,
+    velocity: 0,
+    ballastWaterFraction: 0,
+  };
+  const fullBallast = {
+    depthBelowSurface: 10,
+    velocity: 0,
+    ballastWaterFraction: 1,
+  };
   assert.ok(totalMass(fullBallast, params) > totalMass(emptyBallast, params));
   const buoyancyUnchanged =
-    buoyancyForce(emptyBallast, params, HULL_HEIGHT) === buoyancyForce(fullBallast, params, HULL_HEIGHT);
-  assert.ok(buoyancyUnchanged, "buoyancy at full submersion should not depend on ballast fraction");
+    buoyancyForce(emptyBallast, params, HULL_HEIGHT) ===
+    buoyancyForce(fullBallast, params, HULL_HEIGHT);
+  assert.ok(
+    buoyancyUnchanged,
+    "buoyancy at full submersion should not depend on ballast fraction",
+  );
 }
 
 // Hydrostatic pressure increases linearly with depth: P = P0 + rho*g*h.
 {
   const water = FLUIDS.water;
-  const params = { gravity: EARTH_G, fluidDensity: water.density, dragCoefficient: water.dragCoefficient, hullVolume: HULL_VOLUME, hullMass: 1000, surfaceY: 0 };
+  const params = {
+    gravity: EARTH_G,
+    fluidDensity: water.density,
+    dragCoefficient: water.dragCoefficient,
+    hullVolume: HULL_VOLUME,
+    hullMass: 1000,
+    surfaceY: 0,
+  };
   const p0 = hydrostaticPressure(0, params);
   const p10 = hydrostaticPressure(10, params);
   const p20 = hydrostaticPressure(20, params);
@@ -122,7 +150,10 @@ const HULL_VOLUME = 20; // m^3
   assert.equal(submergedVolumeFraction(100, HULL_HEIGHT), 1);
   assert.equal(submergedVolumeFraction(-100, HULL_HEIGHT), 0);
   const halfway = submergedVolumeFraction(0, HULL_HEIGHT);
-  assert.ok(Math.abs(halfway - 0.5) < 1e-9, `straddling the surface should be ~50% submerged, got ${halfway}`);
+  assert.ok(
+    Math.abs(halfway - 0.5) < 1e-9,
+    `straddling the surface should be ~50% submerged, got ${halfway}`,
+  );
 }
 
 // A denser-than-fluid sub released from rest should settle into a steady
@@ -147,13 +178,23 @@ const HULL_VOLUME = 20; // m^3
   // free-sinking phase, not the clamp's own stop-at-floor behavior.
   for (let i = 0; i < 2000 && state.depthBelowSurface < 35; i++) {
     state = stepSubmarine(state, params, HULL_HEIGHT, 0, 1 / 120);
-    if (lastVelocity !== 0 && Math.sign(state.velocity) !== Math.sign(lastVelocity) && Math.abs(state.velocity) > 0.01) {
+    if (
+      lastVelocity !== 0 &&
+      Math.sign(state.velocity) !== Math.sign(lastVelocity) &&
+      Math.abs(state.velocity) > 0.01
+    ) {
       signFlips += 1;
     }
     lastVelocity = state.velocity;
   }
-  assert.ok(signFlips === 0, `velocity should not oscillate (sign flips), got ${signFlips} flips`);
-  assert.ok(state.velocity > 0, "a denser-than-fluid sub should settle into a sinking (positive) velocity");
+  assert.ok(
+    signFlips === 0,
+    `velocity should not oscillate (sign flips), got ${signFlips} flips`,
+  );
+  assert.ok(
+    state.velocity > 0,
+    "a denser-than-fluid sub should settle into a sinking (positive) velocity",
+  );
 }
 
 console.log(

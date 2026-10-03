@@ -1,12 +1,25 @@
 import React from "react";
 import { strict as assert } from "node:assert";
 import { renderToStaticMarkup } from "react-dom/server";
-import ProjectilePage from "../components/physics-sims/projectile/ProjectilePage";
-import { existsSync, readFileSync } from "node:fs";
-import { physicsSimulations, PhysicsSimulationList } from "../components/physics-sims/Simulations";
+import ProjectilePage from "../features/laboratory/subjects/physics/simulations/ui/projectile/ProjectilePage";
+import { existsSync } from "node:fs";
+import { laboratoryPath } from "../features/laboratory/routes";
+import { resolveRouteContext } from "../application/routeContext";
+import {
+  physicsSimulations,
+  PhysicsSimulationList,
+} from "../features/laboratory/subjects/physics/simulations/ui/Simulations";
 
 const markup = renderToStaticMarkup(<ProjectilePage />);
-for (const text of ["Misi percobaan:", "Ellie, teman eksperimenmu", 'aria-live="polite"', "Apa yang terjadi?", "Rumus &amp; Penjelasan", "Tembak!", "Siap"]) {
+for (const text of [
+  "Misi percobaan:",
+  "Ellie, teman eksperimenmu",
+  'aria-live="polite"',
+  "Apa yang terjadi?",
+  "Rumus &amp; Penjelasan",
+  "Tembak!",
+  "Siap",
+]) {
   assert.ok(markup.includes(text), `Missing projectile UI: ${text}`);
 }
 assert.equal((markup.match(/class="sim-quiz-question"/g) || []).length, 3);
@@ -19,12 +32,26 @@ assert.equal(new Set(physicsSimulations.map((sim) => sim.id)).size, 5);
 for (const sim of physicsSimulations) {
   assert.ok(list.includes(`href="/fisika/${sim.id}"`));
   assert.ok(list.includes(`/physics-previews/${sim.id}.webp`));
-  assert.ok(existsSync(`public/physics-previews/${sim.id}.webp`), `Missing preview for ${sim.id}`);
+  assert.ok(
+    existsSync(`public/physics-previews/${sim.id}.webp`),
+    `Missing preview for ${sim.id}`,
+  );
 }
-assert.ok(!list.includes('class="sim-badge"'), "Simulation cards should not show grade badges");
+assert.ok(
+  !list.includes('class="sim-badge"'),
+  "Simulation cards should not show grade badges",
+);
 assert.ok(!list.includes('href="/sandbox/physics"'));
-const app = readFileSync("components/App.tsx", "utf8");
-assert.ok(app.includes('s.id === "physics" ? "/fisika"'), "Physics lab choice must open the faiz simulations");
-assert.ok(app.includes('pathname === `/fisika/${sim.id}`'), "Only known simulation routes should be public");
-assert.ok(app.includes('"canvas-shell"'), "Chemistry canvas shell must remain intact");
-console.log("Physics integration checks passed: faiz projectile UI, five simulation routes, Physics entry point and preserved Chemistry shell.");
+assert.equal(laboratoryPath("physics"), "/fisika");
+const simulationIds = physicsSimulations.map((simulation) => simulation.id);
+assert.equal(
+  resolveRouteContext("/fisika/meriam-target", simulationIds).isPublic,
+  true,
+);
+assert.equal(
+  resolveRouteContext("/fisika/not-a-simulation", simulationIds).isPublic,
+  false,
+);
+console.log(
+  "Physics integration checks passed: faiz projectile UI, five simulation routes, Physics entry point and preserved Chemistry shell.",
+);

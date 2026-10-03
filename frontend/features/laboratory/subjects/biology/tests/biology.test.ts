@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import { biologyCatalog, biologyContainers, specimens } from "../catalog";
+import { biologyRules } from "../rules";
+import { biologyFields } from "../controlFields";
+import { punnett } from "../measurements";
+import { initialLab, reduceLab } from "../../../domain/engine";
+
+assert.ok(
+  [...biologyCatalog, ...biologyContainers].every(
+    (m) => m.discipline === "biology",
+  ),
+);
+assert.ok(biologyRules.every((r) => r.discipline === "biology"));
+assert.ok(biologyFields.microscope.some(([key]) => key === "focus"));
+assert.ok(specimens.onion.structures.includes("dinding sel"));
+assert.deepEqual(punnett(true, false, 42), punnett(true, false, 42));
+assert.equal(
+  punnett(true, false, 42).reduce((sum, n) => sum + n, 0),
+  160,
+);
+let state = reduceLab(initialLab("biology"), {
+  type: "add",
+  material: "microscope",
+});
+const scope = state.entities[0].id;
+state = reduceLab(state, { type: "add", material: "onion" });
+state = reduceLab(state, {
+  type: "connect",
+  source: scope,
+  target: state.entities[1].id,
+});
+assert.equal(state.entities[0].status, specimens.onion.name);
+assert.equal(state.entities[0].measurements["Perbesaran (×)"], 40);
+console.log("Biology module checks passed.");

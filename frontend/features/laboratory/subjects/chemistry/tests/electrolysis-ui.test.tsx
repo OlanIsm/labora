@@ -1,0 +1,122 @@
+import assert from "node:assert/strict";
+import { renderToStaticMarkup } from "react-dom/server";
+import { initialLab, reduceLab, historyReducer } from "../../../domain/engine";
+import { pourDrop } from "../drop";
+import ElectrolysisShape, { electrolysisIndicator } from "../ElectrolysisShape";
+import Workbench from "../../../ui/workbench/Workbench";
+import Observations from "../../../ui/workbench/Observations";
+
+const noop = () => {};
+let state = reduceLab(initialLab(), { type: "add", material: "beaker" });
+const vessel = state.entities[0].id;
+state = pourDrop(state, vessel, { material: "water" })!.state;
+state = reduceLab(state, { type: "add", material: "electrolysis" });
+const cellId = state.entities.at(-1)!.id;
+const cell = () => state.entities.find((e) => e.id === cellId)!;
+assert.equal(electrolysisIndicator(cell(), state).running, false);
+assert.ok(
+  !renderToStaticMarkup(
+    <ElectrolysisShape entity={cell()} state={state} />,
+  ).includes('data-electrode="anode-oxygen"'),
+);
+state = reduceLab(state, { type: "connect", source: cellId, target: vessel });
+state = reduceLab(state, { type: "toggle", id: cellId, key: "active" });
+assert.equal(
+  electrolysisIndicator(cell(), state).running,
+  false,
+  "Activation without elapsed time must not fabricate gas",
+);
+state = reduceLab(state, { type: "tick", dt: 2 });
+const waterResult = electrolysisIndicator(cell(), state);
+assert.ok(waterResult.running && waterResult.hydrogen > 0);
+assert.equal(waterResult.hydrogen, waterResult.oxygen * 2);
+assert.equal(
+  state.entities.find((e) => e.id === vessel)!.measurements[
+    "Gas terbentuk (mL)"
+  ],
+  waterResult.hydrogen + waterResult.oxygen,
+);
+const waterDrawing = renderToStaticMarkup(
+  <ElectrolysisShape entity={cell()} state={state} />,
+);
+assert.ok(waterDrawing.includes('data-electrode="anode-oxygen"'));
+assert.ok(waterDrawing.includes('data-electrode="cathode-hydrogen"'));
+assert.ok(waterDrawing.includes("Anoda") && waterDrawing.includes("Katoda"));
+const waterReadings = renderToStaticMarkup(
+  <Observations entity={cell()} state={state} />,
+);
+assert.ok(
+  waterReadings.includes("H₂ katoda (mL)") &&
+    waterReadings.includes("O₂ anoda (mL)"),
+);
+assert.ok(!waterReadings.includes("<dt>Suhu (°C)</dt>"));
+state = reduceLab(state, { type: "toggle", id: cellId, key: "active" });
+assert.equal(electrolysisIndicator(cell(), state).running, false);
+state = reduceLab(state, { type: "connect", source: cellId, target: vessel });
+assert.equal(electrolysisIndicator(cell(), state).vessel, undefined);
+
+let copper = reduceLab(initialLab(), { type: "add", material: "beaker" });
+const copperVessel = copper.entities[0].id;
+copper = pourDrop(copper, copperVessel, { material: "water" })!.state;
+copper = pourDrop(copper, copperVessel, { material: "cuso4" })!.state;
+copper = reduceLab(copper, { type: "add", material: "electrolysis" });
+const copperCellId = copper.entities.at(-1)!.id;
+copper = reduceLab(copper, {
+  type: "connect",
+  source: copperCellId,
+  target: copperVessel,
+});
+copper = reduceLab(copper, { type: "toggle", id: copperCellId, key: "active" });
+copper = reduceLab(copper, { type: "tick", dt: 2 });
+const copperCell = copper.entities.find((e) => e.id === copperCellId)!;
+const copperResult = electrolysisIndicator(copperCell, copper);
+assert.ok(copperResult.copper && copperResult.deposit > 0);
+assert.equal(
+  copperResult.hydrogen,
+  0,
+  "Water solvent must not also generate the pure-water electrolysis products in the CuSO4 model",
+);
+assert.equal(copperResult.oxygen, 0);
+const copperDrawing = renderToStaticMarkup(
+  <ElectrolysisShape entity={copperCell} state={copper} />,
+);
+assert.ok(copperDrawing.includes('data-electrode="cathode-copper"'));
+assert.ok(!copperDrawing.includes('data-electrode="cathode-hydrogen"'));
+assert.ok(
+  renderToStaticMarkup(
+    <Observations entity={copperCell} state={copper} />,
+  ).includes("<dt>Cu katoda (g)</dt>"),
+);
+
+const selected = renderToStaticMarkup(
+  <Workbench
+    state={state}
+    selected={cellId}
+    onSelect={noop}
+    dispatch={noop}
+    onPlaceTube={noop}
+  />,
+);
+const unselected = renderToStaticMarkup(
+  <Workbench
+    state={state}
+    selected=""
+    onSelect={noop}
+    dispatch={noop}
+    onPlaceTube={noop}
+  />,
+);
+assert.equal(
+  (selected.match(/class="chemistry-return-object"/g) || []).length,
+  1,
+);
+assert.ok(!unselected.includes('class="chemistry-return-object"'));
+const removed = historyReducer(
+  { past: [], present: state, future: [] },
+  { type: "remove", id: cellId },
+);
+assert.ok(!removed.present.entities.some((e) => e.id === cellId));
+assert.deepEqual(historyReducer(removed, { type: "undo" }).present, state);
+console.log(
+  "Selected-object return and electrolysis indicator checks passed: off/waiting/gas/deposit states, electrode labels, CuSO4 priority and undo.",
+);

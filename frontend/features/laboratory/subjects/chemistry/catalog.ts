@@ -1,0 +1,218 @@
+import type { Material } from "../../domain/types";
+
+const liquids: Material[] = [
+  ["water", "Air suling", 18.015, 1, 0, 0],
+  ["tap-water", "Air keran", 18.015, 1, 0, 0],
+  ["ethanol", "Etanol", 46.07, 0.789, 0, 0],
+  ["oil", "Minyak goreng", 880, 0.92, 0, 0],
+  ["hcl01", "HCl 0,1 M", 36.46, 1, 0.1, 1],
+  ["hcl1", "HCl 1 M", 36.46, 1, 1, 1],
+  ["h2so4", "H₂SO₄ 0,1 M", 98.08, 1, 0.1, 2],
+  ["acetic", "Cuka 0,1 M", 60.05, 1, 0.1, 0],
+  ["naoh01", "NaOH 0,1 M", 40, 1, 0.1, -1],
+  ["naoh1", "NaOH 1 M", 40, 1, 1, -1],
+  ["ammonia", "NH₃ 0,1 M", 17.03, 1, 0.1, 0],
+  ["h2o2", "H₂O₂ 3%", 34.01, 1, 0.88, 0],
+].map(([id, name, mm, density, concentration, charge]) => ({
+  id: String(id),
+  name: String(name),
+  discipline: "chemistry",
+  kind: "material",
+  phase: "liquid",
+  molarMass: Number(mm),
+  density: Number(density),
+  concentration: Number(concentration),
+  acid: Number(charge) > 0 ? Number(charge) : 0,
+  base: Number(charge) < 0 ? -Number(charge) : 0,
+  soluble: id !== "oil",
+  color: id === "oil" ? "#e2bb44" : "#bde8f4",
+  ka: id === "acetic" ? 1.8e-5 : undefined,
+  kb: id === "ammonia" ? 1.8e-5 : undefined,
+  ions: Number(charge) !== 0 ? 2 : 0,
+  heatCapacity: id === "ethanol" ? 2.44 : id === "oil" ? 1.97 : 4.18,
+}));
+
+const solids: Material[] = [
+  ["nacl", "NaCl", 58.44, 36, 2],
+  ["kcl", "KCl", 74.55, 34, 2],
+  ["cacl2", "CaCl₂", 110.98, 74, 3],
+  ["licl", "LiCl", 42.39, 83, 2],
+  ["na2co3", "Na₂CO₃", 105.99, 22, 3],
+  ["nahco3", "NaHCO₃ / soda kue", 84.01, 10, 2],
+  ["cuso4", "CuSO₄", 159.61, 32, 2],
+  ["fecl3", "FeCl₃", 162.2, 92, 4],
+  ["agno3", "AgNO₃", 169.87, 216, 2],
+  ["bacl2", "BaCl₂", 208.23, 36, 3],
+  ["pbno3", "Pb(NO₃)₂", 331.2, 52, 3],
+  ["ki", "KI", 166, 144, 2],
+  ["kscn", "KSCN", 97.18, 217, 2],
+  ["kno3", "KNO₃", 101.1, 38, 2],
+  ["na2so4", "Na₂SO₄", 142.04, 28, 3],
+  ["znso4", "ZnSO₄", 161.47, 57, 2],
+  ["mg", "Pita Mg", 24.31, 0, 0],
+  ["zn", "Zn keping", 65.38, 0, 0],
+  ["zn-powder", "Zn serbuk", 65.38, 0, 0],
+  ["cu", "Kawat Cu", 63.55, 0, 0],
+  ["fe", "Paku Fe", 55.85, 0, 0],
+  ["al", "Al foil", 26.98, 0, 0],
+  ["ag", "Ag", 107.87, 0, 0],
+  ["caco3", "CaCO₃ keping", 100.09, 0, 0],
+  ["caco3-powder", "CaCO₃ serbuk", 100.09, 0, 0],
+  ["mno2", "MnO₂", 86.94, 0, 0],
+  ["sand", "Pasir", 60.08, 0, 0],
+  ["iron-powder", "Serbuk besi", 55.85, 0, 0],
+  ["sucrose", "Gula pasir / sukrosa", 342.3, 200, 0],
+  ["glucose", "Glukosa", 180.16, 90, 0],
+  ["starch", "Amilum / tepung kanji", 162.14, 0, 0],
+].map(([id, name, mm, solubility, ions]) => ({
+  id: String(id),
+  name: String(name),
+  molarMass: Number(mm),
+  discipline: "chemistry" as const,
+  kind: "material" as const,
+  phase: "solid" as const,
+  density: 2,
+  solubility: Number(solubility),
+  soluble: Number(solubility) > 0,
+  ions: Number(ions),
+  color:
+    id === "cuso4"
+      ? "#3c91bc"
+      : id === "fecl3"
+        ? "#a76c40"
+        : id === "cu"
+          ? "#a86a39"
+          : "#b2bcc9",
+  kb: id === "na2co3" ? 2.1e-4 : undefined,
+}));
+const extras = [
+  ["yeast", "Ragi"],
+  ["protein", "Putih telur"],
+  ["saliva", "Air liur / amilase"],
+  ["cabbage", "Kubis ungu"],
+  ["dye", "Pewarna makanan / tinta"],
+  ["soap", "Sabun"],
+  ["universal", "Indikator universal"],
+  ["pp", "Fenolftalein"],
+  ["mo", "Metil oranye"],
+  ["btb", "Bromtimol biru"],
+  ["litmus-red", "Lakmus merah"],
+  ["litmus-blue", "Lakmus biru"],
+  ["cabbage-indicator", "Ekstrak kubis ungu"],
+  ["iodine", "Larutan iodin"],
+  ["benedict", "Pereaksi Benedict"],
+  ["biuret", "Pereaksi biuret"],
+].map(([id, name]): Material => ({
+  id,
+  name,
+  discipline: "chemistry",
+  kind: "material",
+  phase: id === "litmus-red" || id === "litmus-blue" ? "solid" : "liquid",
+  molarMass: 100,
+  density: 1,
+  color:
+    id === "litmus-red"
+      ? "#b54458"
+      : id === "litmus-blue"
+        ? "#37699c"
+        : "#bde8f4",
+  tags: ["conceptual"],
+}));
+const containers = [
+  ["beaker", "Gelas kimia", 250],
+  ["test-tube", "Tabung reaksi", 25],
+  ["erlenmeyer", "Labu Erlenmeyer", 250],
+  ["cylinder", "Gelas ukur", 100],
+  ["burette", "Buret + statif", 50],
+  ["evaporating-dish", "Cawan penguap", 100],
+  ["watch-glass", "Kaca arloji", 20],
+  ["water-bath", "Penangas air", 500],
+  ["calorimeter", "Kalorimeter", 500],
+].map(([id, name, capacity]): Material => ({
+  id: String(id),
+  name: String(name),
+  capacity: Number(capacity),
+  kind: "container",
+  discipline: "chemistry",
+  color: "#bde8f4",
+}));
+const tools: [string, string, string][] = [
+  ["dropper", "Pipet tetes", "transfer"],
+  ["rack", "Rak tabung reaksi", "support"],
+  ["funnel", "Corong + kertas saring", "filter"],
+  ["stirrer", "Batang pengaduk", "stir"],
+  ["burner", "Pembakar", "heat"],
+  ["tripod", "Kaki tiga + kasa", "support"],
+  ["thermometer", "Termometer", "temperature"],
+  ["balance", "Timbangan digital", "mass"],
+  ["ph-meter", "pH meter", "ph"],
+  ["stopwatch", "Stopwatch", "time"],
+  ["electrolyte-tester", "Uji elektrolit", "conductivity"],
+  ["electrolysis", "Sel elektrolisis", "electrolysis"],
+  ["chromatography", "Kertas kromatografi", "chromatography"],
+  ["balloon", "Balon", "gas"],
+];
+export const chemistryProducts: Material[] = [
+  {
+    id: "acetate",
+    name: "Natrium asetat",
+    soluble: true,
+    kind: "material",
+    discipline: "chemistry",
+    molarMass: 82.03,
+    base: 1,
+    ka: 1.8e-5,
+    ions: 2,
+  },
+  {
+    id: "ammonium",
+    name: "Amonium klorida",
+    soluble: true,
+    kind: "material",
+    discipline: "chemistry",
+    molarMass: 53.49,
+    acid: 1,
+    kb: 1.8e-5,
+    ions: 2,
+  },
+  ...[
+    ["agcl", 143.32],
+    ["baso4", 233.39],
+    ["pbi2", 461],
+    ["cuoh2", 97.56],
+    ["feoh3", 106.87],
+    ["agi", 234.77],
+    ["pbcl2", 278.1],
+    ["mgo", 40.3],
+    ["fe-copper-salt", 151.9],
+    ["h2", 2.016],
+    ["o2", 32],
+    ["co2", 44.01],
+  ].map(([id, m]): Material => ({
+    id: String(id),
+    name: String(id),
+    molarMass: Number(m),
+    kind: "material",
+    discipline: "chemistry",
+    phase: ["h2", "o2", "co2"].includes(String(id)) ? "gas" : "solid",
+  })),
+].map((x) => ({ ...x, kind: "material", discipline: "chemistry" }) as Material);
+export const chemistryMaterials: Material[] = [
+  ...liquids,
+  ...solids,
+  ...extras,
+];
+export const chemistryContainers = containers;
+export const chemistryTools = tools.map(([id, name, model]): Material => ({
+  id,
+  name,
+  model,
+  capacity: id === "dropper" ? 5 : undefined,
+  kind:
+    id === "dropper"
+      ? "container"
+      : ["temperature", "mass", "ph", "time", "conductivity"].includes(model)
+        ? "instrument"
+        : "apparatus",
+  discipline: "chemistry",
+}));

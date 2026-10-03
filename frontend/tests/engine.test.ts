@@ -1,7 +1,20 @@
 import { strict as assert } from "node:assert";
-import { experiments, getExperiment } from "../lib/data";
-import { act, answer, initialRuntime, score } from "../lib/engine";
-import { ohmsLaw, classifyPH, dilution, pendulumPeriod } from "../lib/science";
+import {
+  experiments,
+  getExperiment,
+} from "../features/experiments/domain/definitions";
+import {
+  act,
+  answer,
+  initialRuntime,
+  score,
+} from "../features/experiments/domain/engine";
+import {
+  ohmsLaw,
+  classifyPH,
+  dilution,
+  pendulumPeriod,
+} from "../features/experiments/domain/science";
 
 let exp = experiments[0];
 let s = initialRuntime();

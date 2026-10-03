@@ -1,11 +1,15 @@
-import "./styles.css";
-import "./sandbox.css";
-import "../features/chemistry/chemistry.css";
-import "../features/physics/physics.css";
+import "../features/laboratory/subjects/chemistry/chemistry.css";
+import "../features/laboratory/subjects/physics/physics.css";
 import "./physics-sims.css";
-import './specimens.css';
+import "./sandbox.css";
+import "./specimens.css";
+import "./styles.css";
 export const metadata = {
   title: "Labora | Laboratorium Sains Virtual",
+  icons: {
+    icon: "/logo/logo.png",
+    apple: "/logo/logo.png",
+  },
   description:
     "Coba eksperimen kimia, fisika, dan biologi. Amati hasilnya dan pahami sains di baliknya.",
 };
