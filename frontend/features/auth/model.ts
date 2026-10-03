@@ -1,4 +1,7 @@
 export type User = {
+  id?: string;
+  mode?: "demo" | "account";
+  schoolId?: string;
   name: string;
   email: string;
   role: "student" | "teacher";
@@ -14,6 +17,7 @@ export type Credentials = {
 export interface AuthGateway {
   readonly configured: boolean;
   authenticate(credentials: Credentials): Promise<User | null>;
+  enterDemo?(profile: User): Promise<User>;
 }
 
 export interface SessionRepository extends AuthGateway {

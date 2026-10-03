@@ -1,12 +1,12 @@
 # Labora architecture
 
-Labora is a modular monolith: one Next.js application, one deployment, and one Supabase database. Features communicate through explicit TypeScript entry points within the same process. Demo mode uses browser persistence. The refactor retains URLs, saved object IDs, localStorage keys, the database schema, and the visual design.
+Labora is a modular monolith: one Next.js application, one deployment, and one Supabase database. Features communicate through explicit TypeScript entry points within the same process. Demo mode uses browser persistence. Account operations use `/api/v1` through a shared HTTP client. Backend migration scope and release gates are tracked in `backend/IMPLEMENTATION_PLAN.md`.
 
 ## Structure
 
 ```text
 frontend/
-  app/                 Next.js entry point, metadata, global styles
+  app/                 Next.js entry point, metadata, global styles and API adapters
   application/         Route composition, application state, dependency wiring
   features/
     auth/              Session, authentication, profile persistence
@@ -26,7 +26,11 @@ frontend/
   tests/               Integration, domain, UI and browser regressions
   scripts/             Automated architecture checks
 backend/
-  schema.sql           Supabase tables and access policies
+  modules/identity/    Verified authentication and account profile operations
+  shared/             HTTP contracts, request validation and server Supabase client
+  schema.sql           Legacy schema reference; not the new installation script
+shared/
+  contracts/           Framework-independent API response and identity types
 ```
 
 Chemistry, physics and biology are subdomains of the laboratory module: they share bench entities, quantities and cross-subject experiments. The existing equations and state transitions remain separate from React rendering. The five physics simulations keep their own pure engines; React animation loops and coaching hooks live under `application/`, and browser audio under `infrastructure/`.
@@ -47,6 +51,8 @@ Only expose symbols that have callers. Internal files can import other files wit
 - Features do not import `application/` or `app/`.
 - `shared/` does not import features.
 - Domain engines do not import React, Next.js, Supabase, UI, or infrastructure.
+- Browser modules do not import the Supabase SDK or backend runtime. Next.js API routes and middleware are server adapters.
+- Root `shared/contracts/` does not depend on framework or SDK packages. Path aliases connect these folders without workspaces.
 - Runtime dependencies between modules must be acyclic. Type contracts can refer to another module's public model.
 
 `npm run check:architecture` enforces these rules against static imports, re-exports and dynamic imports. It also detects runtime cycles between features. Feature styles are loaded by the Next.js root layout; this CSS composition is outside the TypeScript API boundary.
@@ -57,13 +63,15 @@ Only expose symbols that have callers. Internal files can import other files wit
 - **Open/closed:** experiment definitions extend the existing step engine; physics simulations register in the simulation catalog. New subjects can add scientific implementations within the laboratory module.
 - **Liskov substitution:** `SessionRepository`, `AssignmentRepository`, `ProgressRepository` and `RuntimeRepository` define behavior independent of Supabase. Implementations or test doubles follow the same contracts.
 - **Interface segregation:** login receives `AuthGateway`; dashboard receives only runtime reading; guided experiments receive runtime persistence. Screens do not receive the entire application service registry.
-- **Dependency inversion:** `useApplicationState` receives `ApplicationServices`; authentication and runtime UI receive narrow ports. The composition layer chooses the browser/Supabase implementations.
+- **Dependency inversion:** `useApplicationState` receives `ApplicationServices`; authentication and runtime UI receive narrow ports. The composition layer chooses the demo/API implementations.
 
 ## Persistence and failures
 
-Each feature owns its storage operations and database table access. The shared browser adapter only reads, writes and removes JSON; it contains no assignment, session or scoring logic. Supabase configuration stays in shared infrastructure.
+Each frontend feature owns its persistence contract. Backend modules own database access. The shared browser adapter only reads, writes and removes JSON; it contains no assignment, session or scoring logic. Supabase configuration and cookie authentication stay on the server.
 
-Demo profiles never sync school data. Assignment publication waits for cloud persistence before saving locally. Completed experiment results save locally first; failed synchronization reports that the local result is available. Blocked or malformed browser storage returns the same safe fallbacks used by demo mode. Existing bench persistence retains its in-memory fallback and versioned validation.
+Demo profiles never sync school data. Online identities are verified through the API and are never recovered from cached profile claims. Account failures never fall back to demo storage. Demo assignments and results remain local; official experiment results will be submitted and scored on the server in Phase 4. Assignment/progress HTTP adapters are migration bridges: their backend endpoints and final DTOs are still pending. Existing bench persistence retains its in-memory fallback and versioned validation until the sandbox migration.
+
+Every API response carries a request ID and a typed success/error envelope. Mutation handlers enforce same-origin requests, JSON payload limits and field validation. Client errors expose safe messages and retry information; provider errors and credentials are not returned. See the implementation plan for the complete error contract.
 
 ## Maintenance checks
 
@@ -71,6 +79,7 @@ Demo profiles never sync school data. Assignment publication waits for cloud per
 cd frontend
 npm run check
 npm test
+npm run test:api
 npm run test:ui
 npm run build
 ```

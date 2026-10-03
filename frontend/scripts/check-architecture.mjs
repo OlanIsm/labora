@@ -32,7 +32,11 @@ function location(path) {
   return relative(root, path).replaceAll("\\", "/");
 }
 
-for (const file of sourceFiles(root)) {
+for (const file of [
+  ...sourceFiles(root),
+  ...sourceFiles(join(root, "../backend")),
+  ...sourceFiles(join(root, "../shared")),
+]) {
   const sourcePath = location(file);
   const feature = sourcePath.match(/^features\/([^/]+)\//)?.[1];
   const domain = sourcePath.includes("/domain/");
@@ -58,6 +62,31 @@ for (const file of sourceFiles(root)) {
       const targetFeature = targetPath.match(/^features\/([^/]+)\/(.+)$/);
       const report = (message) =>
         errors.push(`${sourcePath}: ${message} (${spec})`);
+      const serverAdapter =
+        sourcePath.startsWith("app/api/") || sourcePath === "middleware.ts";
+      if (
+        /^@supabase\//.test(spec) &&
+        !sourcePath.startsWith("../backend/") &&
+        !serverAdapter
+      )
+        report(
+          "Supabase SDK belongs to server adapters, never browser features",
+        );
+      if (
+        targetPath.startsWith("../backend/") &&
+        !sourcePath.startsWith("../backend/") &&
+        !serverAdapter
+      )
+        report("backend runtime imports are restricted to server adapters");
+      if (
+        sourcePath.startsWith("../shared/") &&
+        !node.importClause?.isTypeOnly &&
+        !node.isTypeOnly &&
+        /^(react|next|@supabase\/)/.test(spec)
+      )
+        report(
+          "shared contracts must remain independent of frameworks and SDKs",
+        );
       if (
         sourcePath.startsWith("shared/") &&
         /^(features|application|app)\//.test(targetPath)
@@ -112,5 +141,5 @@ assert.equal(
   `Architecture violations:\n${errors.join("\n")}`,
 );
 console.log(
-  "Architecture passed: public module boundaries, pure domains, shared isolation, and no runtime module cycles.",
+  "Architecture passed: module boundaries, server-only SDK/backend imports, pure contracts/domains, and no runtime module cycles.",
 );

@@ -1,5 +1,7 @@
-import { supabase } from "./supabase";
+import { isDemoUser } from "../identity";
 
-export function canSync(user: { email: string } | null): boolean {
-  return !!supabase && !!user && !user.email.startsWith("demo-");
+export function canSync(
+  user: { email: string; mode?: string; id?: string } | null,
+): boolean {
+  return !!user && user.mode === "account" && !!user.id && !isDemoUser(user);
 }

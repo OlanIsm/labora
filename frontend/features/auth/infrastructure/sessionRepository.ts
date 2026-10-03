@@ -1,69 +1,82 @@
+import type { AccountProfile, AuthConfiguration } from "@contracts/api";
 import { browserStorage } from "@/shared/infrastructure/browserStorage";
-import { canSync } from "@/shared/infrastructure/cloudSession";
-import { supabase } from "@/shared/infrastructure/supabase";
+import { apiFetch, ApiError } from "@/shared/infrastructure/api";
+import { isDemoUser } from "@/shared/identity";
 import type { SessionRepository, User } from "../model";
 
+let configured: boolean | null = null;
+
 export const sessionRepository: SessionRepository = {
-  configured: !!supabase,
-  localUser: () => browserStorage.read<User | null>("labora-user", null),
+  get configured() {
+    return configured === true;
+  },
+  localUser() {
+    const cached = browserStorage.read<User | null>("labora-user", null);
+    return cached &&
+      typeof cached.name === "string" &&
+      typeof cached.email === "string" &&
+      ["student", "teacher"].includes(cached.role) &&
+      isDemoUser(cached)
+      ? cached
+      : null;
+  },
   saveLocal: (user) => browserStorage.write("labora-user", user),
   async restore() {
-    const local = this.localUser();
-    if (!supabase) return local;
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return local;
-    const metadata = data.user.user_metadata;
-    const user: User = {
-      name: metadata.name || data.user.email?.split("@")[0] || "Siswa",
-      email: data.user.email || "",
-      role: metadata.role === "teacher" ? "teacher" : "student",
-      className: metadata.className || "",
-    };
-    this.saveLocal(user);
-    return user;
+    configured = null;
+    const config = await apiFetch<AuthConfiguration>("/auth/config");
+    configured = config.configured;
+    if (configured) {
+      try {
+        return await apiFetch<AccountProfile>("/me");
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.code !== "UNAUTHENTICATED")
+          throw error;
+      }
+    }
+    return this.localUser();
   },
   async authenticate({ mode, profile, password }) {
-    if (!supabase) return profile;
-    const response =
-      mode === "register"
-        ? await supabase.auth.signUp({
-            email: profile.email,
-            password,
-            options: { data: profile },
-          })
-        : await supabase.auth.signInWithPassword({
-            email: profile.email,
-            password,
-          });
-    if (response.error) throw response.error;
-    if (mode === "register" && !response.data.session) return null;
-    const metadata = response.data.user?.user_metadata || {};
-    return {
-      ...profile,
-      name: metadata.name || profile.name,
-      role:
-        metadata.role === "teacher"
-          ? "teacher"
-          : metadata.role === "student"
-            ? "student"
-            : profile.role,
-      className: metadata.className || profile.className,
-    };
+    if (configured === null)
+      configured = (await apiFetch<AuthConfiguration>("/auth/config"))
+        .configured;
+    if (!configured) return { ...profile, mode: "demo" };
+    if (mode === "register") {
+      const response = await apiFetch<{
+        confirmationRequired: boolean;
+        user: AccountProfile | null;
+      }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          email: profile.email,
+          password,
+          name: profile.name,
+        }),
+      });
+      return response.user;
+    }
+    return apiFetch<AccountProfile>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: profile.email, password }),
+    });
+  },
+  async enterDemo(profile) {
+    await apiFetch("/auth/logout", { method: "POST" });
+    const demo: User = { ...profile, mode: "demo" };
+    this.saveLocal(demo);
+    return demo;
   },
   async signOut() {
-    if (supabase) {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    }
+    await apiFetch("/auth/logout", { method: "POST" });
     this.saveLocal(null);
   },
   async updateProfile(user) {
-    if (canSync(user) && supabase) {
-      const { error } = await supabase.auth.updateUser({
-        data: { name: user.name, className: user.className },
-      });
-      if (error) throw error;
+    if (isDemoUser(user)) {
+      this.saveLocal(user);
+      return;
     }
-    this.saveLocal(user);
+    await apiFetch<AccountProfile>("/me", {
+      method: "PATCH",
+      body: JSON.stringify({ name: user.name }),
+    });
   },
 };

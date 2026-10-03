@@ -1,7 +1,7 @@
 import type { User } from "@/features/auth/model";
 import { browserStorage } from "@/shared/infrastructure/browserStorage";
 import { canSync } from "@/shared/infrastructure/cloudSession";
-import { supabase } from "@/shared/infrastructure/supabase";
+import { apiFetch, ApiError } from "@/shared/infrastructure/api";
 import type { RecordEntry } from "./model";
 
 export interface ProgressRepository {
@@ -22,28 +22,16 @@ export const progressRepository: ProgressRepository = {
     ]);
   },
   async loadRemote(user) {
-    if (!canSync(user) || !supabase) return null;
-    const { data, error } = await supabase
-      .from("experiment_results")
-      .select("data");
-    if (error) throw error;
-    return (data || []).map((row) => row.data as RecordEntry);
+    if (!canSync(user)) return null;
+    return apiFetch<RecordEntry[]>("/progress");
   },
   async saveRemote(record, user) {
-    if (!canSync(user) || !supabase || !user) return;
-    const {
-      data: { user: sessionUser },
-    } = await supabase.auth.getUser();
-    if (!sessionUser) throw new Error("Sign in to save results.");
-    const { error } = await supabase.from("experiment_results").upsert(
-      {
-        student_id: sessionUser.id,
-        experiment_id: record.experimentId,
-        class_name: user.className || "Science class",
-        data: record,
-      },
-      { onConflict: "student_id,experiment_id" },
+    if (!canSync(user)) return;
+    // Account results will come from session submission in Phase 4, never a client score upload.
+    throw new ApiError(
+      "FORBIDDEN",
+      "Hasil akun sekolah harus disimpan melalui sesi eksperimen.",
+      403,
     );
-    if (error) throw error;
   },
 };

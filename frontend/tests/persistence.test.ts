@@ -14,6 +14,12 @@ import type { User } from "../features/auth/model";
 async function main() {
   const values = new Map<string, string>();
   let blocked = false;
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    Response.json({
+      data: { configured: false },
+      requestId: "persistence-test",
+    });
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
   Object.defineProperty(globalThis, "window", {
     configurable: true,
@@ -55,7 +61,7 @@ async function main() {
           profile: user,
           password: "local-demo",
         }),
-        user,
+        { ...user, mode: "demo" },
       );
     }
     await sessionRepository.updateProfile({ ...user, name: "Alex" });
@@ -110,6 +116,7 @@ async function main() {
       "Persistence passed: existing keys, profile updates, runtime reset, assignment saves, result replacement, demo isolation, and blocked/corrupt storage.",
     );
   } finally {
+    globalThis.fetch = previousFetch;
     if (previousWindow)
       Object.defineProperty(globalThis, "window", previousWindow);
     else Reflect.deleteProperty(globalThis, "window");

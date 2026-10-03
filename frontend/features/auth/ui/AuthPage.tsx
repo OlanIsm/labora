@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import type { AuthGateway } from "../model";
+import { ApiError } from "@/shared/infrastructure/api";
 
 export function Auth({
   onAuth,
@@ -46,22 +47,36 @@ export function Auth({
       }
       onAuth(user);
       router.push("/dashboard");
-    } catch {
+    } catch (error) {
       setMessage(
-        "Belum bisa masuk. Periksa email dan kata sandi, lalu coba lagi.",
+        error instanceof ApiError
+          ? Object.values(error.fieldErrors || {})
+              .flat()
+              .join(" ") || error.message
+          : "Belum bisa masuk. Periksa email dan kata sandi, lalu coba lagi.",
       );
     } finally {
       setBusy(false);
     }
   }
-  function demo(r: "student" | "teacher") {
-    onAuth({
+  async function demo(r: "student" | "teacher") {
+    setBusy(true);
+    setMessage("");
+    const profile: User = {
       name: r === "teacher" ? "Guru Demo" : "Siswa Demo",
       email: `demo-${r}@labora.local`,
       role: r,
       className: "Kelas Demo",
-    });
-    router.push("/dashboard");
+      mode: "demo",
+    };
+    try {
+      onAuth(gateway.enterDemo ? await gateway.enterDemo(profile) : profile);
+      router.push("/dashboard");
+    } catch {
+      setMessage("Mode demo belum bisa dibuka. Coba lagi sebentar.");
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div className="auth-layout">
@@ -91,11 +106,19 @@ export function Auth({
             ini.
           </p>
           <div>
-            <button className="button primary" onClick={() => demo("student")}>
+            <button
+              className="button primary"
+              disabled={busy}
+              onClick={() => demo("student")}
+            >
               <FlaskConical size={19} />
               Coba sebagai siswa
             </button>
-            <button className="button ghost" onClick={() => demo("teacher")}>
+            <button
+              className="button ghost"
+              disabled={busy}
+              onClick={() => demo("teacher")}
+            >
               <GraduationCap size={19} />
               Coba sebagai guru
             </button>

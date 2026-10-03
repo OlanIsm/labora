@@ -152,6 +152,7 @@ Success responses use `{ "data": ..., "requestId": "..." }`. Errors use the foll
 | 401 | `UNAUTHENTICATED` / `INVALID_CREDENTIALS` | Expired session requires login; failed login stays on the form |
 | 403 | `FORBIDDEN` | Show access explanation; never downgrade to a local school account |
 | 404 | `NOT_FOUND` | Show missing/inaccessible resource without disclosing another user's data |
+| 405 | `METHOD_NOT_ALLOWED` | Use the documented operation for this endpoint |
 | 409 | `REVISION_CONFLICT` / `IDEMPOTENCY_CONFLICT` | Preserve draft; fetch canonical session and reconcile |
 | 413 | `PAYLOAD_TOO_LARGE` | Reduce snapshot/file size |
 | 415 | `UNSUPPORTED_MEDIA_TYPE` | Use supported request/upload format |
@@ -275,3 +276,11 @@ Use Supabase local development for migrations/tests where available. Inspect dat
 - Setup/environment documentation, local test commands, migration verification, recovery procedure and a concise operational guide.
 
 This release keeps classroom functionality limited to experiment distribution and assessments. Live collaboration, video lessons, billing, proctoring, AI grading and a full school administration system are outside the current scope.
+
+## 11. Implementation status (2026-10-03)
+
+- Revised plan and error contract committed before implementation (`5f5c1d1`).
+- Phase 0 repository inventory complete. Remote inventory is pending: the authenticated Supabase MCP server is not exposed as callable tools in this active session. Docker CLI is installed, but the local Docker daemon is not running. No database migrations have been applied.
+- Phase 1 foundation implemented: path aliases, typed envelopes/error transport, bounded request validation, origin checks, server-only Supabase auth/profile endpoints, cookie refresh middleware and auth frontend migration.
+- Browser feature imports of Supabase SDK are removed and checked automatically. Assignment/progress adapters now route to the future API contract, but their backend endpoints and final DTO migration are pending Phases 4/5. Authenticated result upload is explicitly rejected until official session submission exists; demo scoring continues locally.
+- Phase 1 is not a V1 release. Live profile/member reads require Phase 2 tables and real-user end-to-end verification. Recovery/enrollment and the remaining Phase 1 hardening require the real project configuration. Phase 2–7 implementation has not been marked complete.

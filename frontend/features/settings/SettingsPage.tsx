@@ -4,6 +4,7 @@ import type { User } from "@/features/auth/model";
 import { CheckCircle2, LogOut, Save, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { isDemoUser } from "@/shared/identity";
 
 export default function SettingsPage({
   user,
@@ -102,6 +103,7 @@ export default function SettingsPage({
                 <input
                   id="profile-class"
                   value={className}
+                  readOnly={!isDemoUser(user)}
                   onChange={(e) => setClassName(e.target.value)}
                   maxLength={80}
                   placeholder="Contoh: Kelas XI IPA"
