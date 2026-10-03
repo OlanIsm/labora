@@ -251,18 +251,18 @@ Old URLs remain valid through explicit ID-to-view adapters. After a successful m
 
 Planning estimate: 19–27 focused engineering days, sequential work by one engineer, including the frontend migrations and meaningful testing. This is an effort forecast, not a calendar guarantee. Phase 0 may revise it after live database and legacy-data inventory. External auth/project access and review waits are excluded. Each phase includes its matching frontend vertical slice rather than postponing all frontend work to Phase 6.
 
-Status snapshot: **2026-10-04**. **✅** means the phase implementation and its recorded local checks are complete; **☐** means work or verification remains. These checks do not mark V1/V2 as deployed or production-ready. See [the detailed checklist](#11-implementation-progress-checklist-2026-10-04) for completed items within unfinished phases.
+Status snapshot: **2026-10-04**. **✅** means the phase work and recorded checks are complete; **☐** means work or verification remains. Local and remote evidence are stated separately; these checks do not mark V1/V2 as deployed or production-ready. See [the detailed checklist](#11-implementation-progress-checklist-2026-10-04).
 
-| Done | Phase                            | Release | Effort   | Work                                                                                    | Progress / remaining work                                                                                                                |
-| ---- | -------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| ☐    | 0. Review and remote inventory   | V1      | 1 day    | Repository/live schema inventory and contracts                                          | Repository inventory and contracts complete; remote schema, policies, users and legacy-data inventory pending                            |
-| ✅   | 1. Backend foundation            | V1      | 2–3 days | Path aliases, HTTP adapters, errors/API client, cookie auth and frontend auth migration | Implemented; local auth and contract checks passed                                                                                       |
-| ✅   | 2. Identity and classroom schema | V1      | 2–3 days | Profiles, memberships, classes, invitations, constraints/RLS and enrollment             | Implemented; local cross-user/school isolation and role-escalation checks passed                                                         |
-| ✅   | 3. Catalog and versioning        | V1      | 2–3 days | Nine versioned experiments, private keys, catalog API/frontend and pure logic           | Implemented; local catalog, private-key isolation and version-pinning checks passed                                                      |
-| ✅   | 4. Sessions and assessment       | V1      | 4–5 days | Guided frontend, canonical actions/answers, grading, history and basic snapshots        | Nine assessed flows passed locally; guided resume/server results verified in independent browser contexts                                |
-| ☐    | 5. Teacher activities            | V2      | 3–4 days | Drafts, custom questions, class publication, recipients, reports and frontend migration | Class workflow implemented and browser-tested; individual recipient targeting and extended authoring/export browser verification pending |
-| ☐    | 6. App integration               | V2      | 3–5 days | Dashboard summaries, subject saves, notes, avatar, notifications and client migration   | Modules/API adapters implemented; final extended cross-device notebook/export verification pending                                       |
-| ☐    | 7. Migration and release         | V2      | 2–3 days | Migrations, legacy conversion, production setup, advisors and recovery                  | Local migrations/checks passed; remote inventory, configuration, deployment and staging verification pending                             |
+| Done | Phase                            | Release | Effort   | Work                                                                                    | Progress / remaining work                                                                                                               |
+| ---- | -------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| ✅   | 0. Review and remote inventory   | V1      | 1 day    | Repository/live schema inventory and contracts                                          | Repository dan remote inventory complete; database aplikasi/Auth/storage kosong sebelum instalasi                                       |
+| ✅   | 1. Backend foundation            | V1      | 2–3 days | Path aliases, HTTP adapters, errors/API client, cookie auth and frontend auth migration | Implemented; local auth and contract checks passed                                                                                      |
+| ✅   | 2. Identity and classroom schema | V1      | 2–3 days | Profiles, memberships, classes, invitations, constraints/RLS and enrollment             | Implemented; local cross-user/school isolation and role-escalation checks passed                                                        |
+| ✅   | 3. Catalog and versioning        | V1      | 2–3 days | Nine versioned experiments, private keys, catalog API/frontend and pure logic           | Implemented; local catalog, private-key isolation and version-pinning checks passed                                                     |
+| ✅   | 4. Sessions and assessment       | V1      | 4–5 days | Guided frontend, canonical actions/answers, grading, history and basic snapshots        | Nine assessed flows passed locally; guided resume/server results verified in independent browser contexts                               |
+| ☐    | 5. Teacher activities            | V2      | 3–4 days | Drafts, custom questions, class publication, recipients, reports and frontend migration | Class workflow dan extended authoring/CSV browser checks passed; individual recipient targeting pending                                 |
+| ✅   | 6. App integration               | V2      | 3–5 days | Dashboard summaries, subject saves, notes, avatar, notifications and client migration   | API adapters, notes/avatar/notifications dan save adapters implemented; cross-device notebook/export browser checks passed              |
+| ☐    | 7. Migration and release         | V2      | 2–3 days | Migrations, legacy conversion, production setup, advisors and recovery                  | Six migrations installed local/remote; database/advisors/read-only smoke verified; HTTPS deployment, Auth/SMTP and full staging pending |
 
 V1 forecast: 11–15 days. V2 forecast: 8–12 additional days. V1 has its own production gate: tested migrations, RLS checks, real auth/catalog/session/results integration, no private keys in the client, and a passing production build. Phase 7 adds the full V2/legacy migration release gate; it does not defer V1 security/testing until V2.
 
@@ -281,64 +281,73 @@ This release keeps classroom functionality limited to experiment distribution an
 
 ## 11. Implementation progress checklist (2026-10-04)
 
-**Legenda:** ✅ = selesai dengan bukti implementasi/verifikasi lokal yang tercatat; ☐ = belum selesai atau belum selesai diverifikasi. Fitur yang kodenya tersedia tetapi masih menunggu pemeriksaan lanjutan dipisahkan dari item verifikasinya. Centang lokal tidak berarti telah diterapkan di produksi.
+**Legenda:** ✅ = selesai dengan bukti implementasi/verifikasi yang tercatat; ☐ = belum selesai atau belum selesai diverifikasi. Fitur yang kodenya tersedia tetapi masih menunggu pemeriksaan lanjutan dipisahkan dari item verifikasinya. Centang lokal tidak berarti telah diterapkan di produksi.
 
 ### V1 — Phase 0–4
 
-| Selesai | Phase      | Pekerjaan                                                             | Bukti / pekerjaan tersisa                                                                                    |
-| ------- | ---------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| ✅      | 0          | Inventaris repository, arsitektur, migrasi frontend dan kontrak error | Plan/contract dicommit sebelum implementasi: `5f5c1d1`                                                       |
-| ☐       | 0          | Inventaris Supabase remote                                            | Periksa tabel, policies, Auth users, riwayat migrasi dan versi PostgreSQL; belum dilakukan                   |
-| ☐       | 0          | Tentukan kompatibilitas dan konversi data lama                        | Bergantung pada inventaris remote; jangan reset atau menimpa data yang belum diperiksa                       |
-| ✅      | 1          | Fondasi API dan transport frontend                                    | Path aliases, DTO/error contract, HTTP adapters dan `apiFetch` tersedia                                      |
-| ✅      | 1          | Auth cookie, recovery dan migrasi UI akun                             | Identitas server diuji lokal; demo terpisah dari akun nyata                                                  |
-| ✅      | 1          | Proteksi API                                                          | Server-only guards, body limits, origin checks dan persistent rate limits tersedia; pemeriksaan lokal passed |
-| ✅      | 2          | Profil, sekolah, keanggotaan, kelas dan undangan                      | Schema/modul/API serta alur enrollment tersedia                                                              |
-| ✅      | 2          | Otorisasi dan isolasi akses                                           | RLS, cross-user/school isolation dan penolakan eskalasi lewat editable Auth metadata diuji lokal             |
-| ✅      | 3          | Katalog sembilan eksperimen dan versi                                 | Seed/migrasi dan API katalog tersedia untuk ketiga subjek                                                    |
-| ✅      | 3          | Pemisahan kunci jawaban dan version pinning                           | Private answer keys serta isolasi Data API diuji lokal                                                       |
-| ✅      | 4          | Sesi terpandu dan migrasi frontend                                    | Canonical actions/answers, UUID retries dan optimistic revisions tersedia                                    |
-| ✅      | 4          | Penilaian server dan hasil final                                      | Sembilan assessed flows, duplicate/stale events dan score tampering diuji pada Supabase lokal                |
-| ✅      | 4          | Resume, progres dan snapshot dasar                                    | Guided resume dan persisted server scores diperiksa dalam dua browser context independen                     |
-| ☐       | V1 release | Rilis V1 pada lingkungan nyata                                        | Masih memerlukan konfigurasi remote, deployment dan staging checks; lihat release checklist                  |
+| Selesai | Phase      | Pekerjaan                                                             | Bukti / pekerjaan tersisa                                                                                      |
+| ------- | ---------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| ✅      | 0          | Inventaris repository, arsitektur, migrasi frontend dan kontrak error | Plan/contract dicommit sebelum implementasi: `5f5c1d1`                                                         |
+| ✅      | 0          | Inventaris Supabase remote                                            | PostgreSQL 17.11; sebelum migrasi: 0 tabel aplikasi, 0 akun, 0 objek storage dan 0 migrasi; MCP terautentikasi |
+| ✅      | 0          | Tentukan kompatibilitas dan konversi data lama                        | Inventaris remote kosong; tidak ada data lama yang perlu dikonversi pada proyek ini                            |
+| ✅      | 1          | Fondasi API dan transport frontend                                    | Path aliases, DTO/error contract, HTTP adapters dan `apiFetch` tersedia                                        |
+| ✅      | 1          | Auth cookie, recovery dan migrasi UI akun                             | Identitas server diuji lokal; demo terpisah dari akun nyata                                                    |
+| ✅      | 1          | Proteksi API                                                          | Server-only guards, body limits, origin checks dan persistent rate limits tersedia; pemeriksaan lokal passed   |
+| ✅      | 2          | Profil, sekolah, keanggotaan, kelas dan undangan                      | Schema/modul/API serta alur enrollment tersedia                                                                |
+| ✅      | 2          | Otorisasi dan isolasi akses                                           | RLS, cross-user/school isolation dan penolakan eskalasi lewat editable Auth metadata diuji lokal               |
+| ✅      | 3          | Katalog sembilan eksperimen dan versi                                 | Seed/migrasi dan API katalog tersedia untuk ketiga subjek                                                      |
+| ✅      | 3          | Pemisahan kunci jawaban dan version pinning                           | Private answer keys serta isolasi Data API diuji lokal                                                         |
+| ✅      | 4          | Sesi terpandu dan migrasi frontend                                    | Canonical actions/answers, UUID retries dan optimistic revisions tersedia                                      |
+| ✅      | 4          | Penilaian server dan hasil final                                      | Sembilan assessed flows, duplicate/stale events dan score tampering diuji pada Supabase lokal                  |
+| ✅      | 4          | Resume, progres dan snapshot dasar                                    | Guided resume dan persisted server scores diperiksa dalam dua browser context independen                       |
+| ☐       | V1 release | Rilis V1 pada lingkungan nyata                                        | Database remote dan server key siap; deployment HTTPS, Auth/SMTP dan staging checks masih pending              |
 
 ### V2 — Phase 5–6
 
-| Selesai | Phase | Pekerjaan                                             | Bukti / pekerjaan tersisa                                                                                   |
-| ------- | ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| ✅      | 5     | Draft dan konfigurasi tugas guru                      | Instruksi, hints, pertanyaan, opsi, jawaban benar dan penjelasan tersedia melalui API/UI                    |
-| ✅      | 5     | Publikasi ke kelas dan penerima tetap                 | Atomic publication, versi tugas dan frozen class recipients tersedia                                        |
-| ✅      | 5     | Laporan guru dan ringkasan paginated                  | Total penyelesaian dihitung terhadap dataset lengkap; UI/API tersedia                                       |
-| ✅      | 5     | Alur browser guru → siswa → laporan                   | Pembuatan/publikasi tugas, submission siswa dan laporan guru diuji lokal                                    |
-| ✅      | 5     | Implementasi ekspor CSV                               | Mengambil seluruh halaman laporan dan melakukan escaping formula pada teks                                  |
-| ☐       | 5     | Verifikasi browser lanjutan authoring dan ekspor      | Final rerun perubahan pertanyaan/penjelasan serta CSV belum selesai                                         |
-| ☐       | 5     | Penargetan penerima individual                        | Belum tersedia; penugasan saat ini berdasarkan kelas                                                        |
-| ✅      | 6     | Migrasi frontend akun ke API                          | API/demo adapters tersedia; direct browser Supabase access telah dihapus dan architecture checks diterapkan |
-| ✅      | 6     | Dashboard, riwayat dan summary progres                | History paginated dan summary menghitung keseluruhan dataset                                                |
-| ✅      | 6     | Penyimpanan per subjek                                | Chemistry bench, kelima simulasi Fisika dan mikroskop memakai account save adapters                         |
-| ✅      | 6     | Penanganan draft dan konflik revisi                   | Draft perangkat dipertahankan; recovery eksplisit setelah memuat versi akun tersedia                        |
-| ✅      | 6     | Implementasi notebook                                 | Owned note API, UUID idempotent, restore dan export text tersedia                                           |
-| ☐       | 6     | Verifikasi browser lanjutan notebook lintas perangkat | Final rerun belum selesai; implementasi/API coverage tidak menggantikan gate browser ini                    |
-| ✅      | 6     | Settings, avatar dan notifikasi                       | Migrasi API, private avatar upload dan persistent read state tersedia; integrasi lokal diperiksa            |
+| Selesai | Phase | Pekerjaan                                             | Bukti / pekerjaan tersisa                                                                                         |
+| ------- | ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| ✅      | 5     | Draft dan konfigurasi tugas guru                      | Instruksi, hints, pertanyaan, opsi, jawaban benar dan penjelasan tersedia melalui API/UI                          |
+| ✅      | 5     | Publikasi ke kelas dan penerima tetap                 | Atomic publication, versi tugas dan frozen class recipients tersedia                                              |
+| ✅      | 5     | Laporan guru dan ringkasan paginated                  | Total penyelesaian dihitung terhadap dataset lengkap; UI/API tersedia                                             |
+| ✅      | 5     | Alur browser guru → siswa → laporan                   | Pembuatan/publikasi tugas, submission siswa dan laporan guru diuji lokal                                          |
+| ✅      | 5     | Implementasi ekspor CSV                               | Mengambil seluruh halaman laporan dan melakukan escaping formula pada teks                                        |
+| ✅      | 5     | Verifikasi browser lanjutan authoring dan ekspor      | Final rerun passed: pertanyaan/penjelasan guru terbit dan terlihat pada siswa; download CSV berisi hasil penerima |
+| ☐       | 5     | Penargetan penerima individual                        | Belum tersedia; penugasan saat ini berdasarkan kelas                                                              |
+| ✅      | 6     | Migrasi frontend akun ke API                          | API/demo adapters tersedia; direct browser Supabase access telah dihapus dan architecture checks diterapkan       |
+| ✅      | 6     | Dashboard, riwayat dan summary progres                | History paginated dan summary menghitung keseluruhan dataset                                                      |
+| ✅      | 6     | Penyimpanan per subjek                                | Chemistry bench, kelima simulasi Fisika dan mikroskop memakai account save adapters                               |
+| ✅      | 6     | Penanganan draft dan konflik revisi                   | Draft perangkat dipertahankan; recovery eksplisit setelah memuat versi akun tersedia                              |
+| ✅      | 6     | Implementasi notebook                                 | Owned note API, UUID idempotent, restore dan export text tersedia                                                 |
+| ✅      | 6     | Verifikasi browser lanjutan notebook lintas perangkat | Final rerun passed: catatan disimpan melalui API, dimuat pada browser context kedua dan diekspor sebagai teks     |
+| ✅      | 6     | Settings, avatar dan notifikasi                       | Migrasi API, private avatar upload dan persistent read state tersedia; integrasi lokal diperiksa                  |
 
 ### Phase 7 — Migration dan release
 
-| Selesai | Pekerjaan                              | Bukti / pekerjaan tersisa                                                                                                |
-| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| ✅      | Lima migrasi database reproducible     | Instalasi/reset database lokal telah passed                                                                              |
-| ✅      | Database advisors lokal                | Tidak ada issue pada pemeriksaan lokal terakhir                                                                          |
-| ✅      | Architecture/type/domain/API/UI checks | Pemeriksaan lokal dan build produksi telah passed                                                                        |
-| ✅      | Dependency audit dan CI dasar          | Audit dependency produksi terakhir tanpa vulnerability; workflow build/check/test tersedia                               |
-| ✅      | Demo browser checks                    | Shell, header, mobile dan demo flow telah diperiksa                                                                      |
-| ✅      | Dokumentasi setup dan recovery         | Setup, backup/rollback dan batas verifikasi dijelaskan di `backend/README.md`                                            |
-| ☐       | Akses pengelolaan Supabase remote      | Pada verifikasi terakhir MCP belum terautentikasi/tool belum tersedia; akses perlu diperiksa kembali                     |
-| ☐       | Konfigurasi secret server              | Pada verifikasi terakhir baru URL, publishable key dan APP_URL lokal tersedia; konfigurasi server produksi belum lengkap |
-| ☐       | Backup dan penanganan data lama        | Inventaris/export/konversi bila diperlukan harus ditentukan sebelum migrasi remote                                       |
-| ☐       | Deployment migrasi remote              | Belum dilakukan; review terhadap database aktual diperlukan                                                              |
-| ☐       | Konfigurasi Auth, SMTP dan callback    | Email confirmation/recovery serta site/callback URLs produksi belum diverifikasi                                         |
-| ☐       | Domain HTTPS dan deployment aplikasi   | APP_URL produksi dan hosting publik belum disiapkan                                                                      |
-| ☐       | Advisors dan verifikasi staging remote | Auth, isolasi akses, student/teacher flows serta persistence perlu diuji pada lingkungan target                          |
-| ☐       | Operasional produksi dan pemulihan     | Backup terverifikasi, logging/monitoring dan prosedur recovery lingkungan target perlu diperiksa                         |
-| ☐       | Rilis V2 / production submission       | Baru dicentang setelah seluruh release gates yang berlaku selesai                                                        |
+| Selesai | Pekerjaan                              | Bukti / pekerjaan tersisa                                                                                                                        |
+| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ✅      | Enam migrasi database reproducible     | Lima migrasi utama lolos instalasi/reset lokal; migrasi keenam untuk empat composite FK indexes dihasilkan dari diff dan diterapkan lokal/remote |
+| ✅      | Database advisors lokal                | Tidak ada issue pada pemeriksaan lokal terakhir                                                                                                  |
+| ✅      | Architecture/type/domain/API/UI checks | Pemeriksaan lokal dan build produksi telah passed                                                                                                |
+| ✅      | Dependency audit dan CI dasar          | Audit dependency produksi terakhir tanpa vulnerability; workflow build/check/test tersedia                                                       |
+| ✅      | Demo browser checks                    | Shell, header, mobile dan demo flow telah diperiksa                                                                                              |
+| ✅      | Dokumentasi setup dan recovery         | Setup, backup/rollback dan batas verifikasi dijelaskan di `backend/README.md`                                                                    |
+| ✅      | Akses pengelolaan Supabase remote      | OAuth MCP aktif dan query inventaris/advisors berhasil pada project cidyenmlvuqciymnqzii                                                         |
+| ✅      | Konfigurasi secret aplikasi lokal      | Secret server terisi dan berhasil diverifikasi; SUPABASE_URL diperbaiki menjadi URL dasar proyek, tanpa /rest/v1/                                |
+| ✅      | Inventaris dan penanganan data lama    | Inventaris sebelum instalasi mencatat database aplikasi dan storage kosong; tidak ada data lama untuk backup/konversi                            |
+| ✅      | Deployment migrasi remote              | Enam migrasi diterapkan; version/name riwayat MCP diselaraskan dengan file repository dan diverifikasi                                           |
+| ☐       | Konfigurasi Auth, SMTP dan callback    | Email confirmation/recovery serta site/callback URLs produksi belum diverifikasi                                                                 |
+| ☐       | Domain HTTPS dan deployment aplikasi   | APP_URL produksi dan hosting publik belum disiapkan                                                                                              |
+| ✅      | Advisors dan read-only smoke remote    | Advisors security/performance diperiksa; katalog/detail API dan penolakan akses anonim telah lulus                                               |
+| ✅      | App lokal dengan database remote       | Dashboard, auth config dan katalog sembilan eksperimen pada localhost:3000 kembali HTTP 200 setelah pemulihan cache dev                          |
+| ☐       | Flow akun pada staging HTTPS           | Login, recovery, tugas, penilaian dan persistence penuh perlu diuji pada deployment target                                                       |
+| ☐       | Operasional produksi dan pemulihan     | Backup terverifikasi, logging/monitoring dan prosedur recovery lingkungan target perlu diperiksa                                                 |
+| ☐       | Rilis V2 / production submission       | Baru dicentang setelah seluruh release gates yang berlaku selesai                                                                                |
 
-Project Supabase yang dikonfigurasi adalah `cidyenmlvuqciymnqzii`. Tidak ada remote reset, migrasi remote, atau deployment aplikasi publik yang tercatat. Estimasi pada section 9 adalah forecast awal, bukan jumlah hari pekerjaan tersisa. Perbarui tabel ini ketika ada bukti implementasi atau verifikasi baru.
+Project Supabase yang dikonfigurasi adalah `cidyenmlvuqciymnqzii`. Enam migrasi remote sudah diterapkan tanpa reset atau kehilangan data. Terdapat 18 tabel public dan dua tabel private dengan RLS aktif, sembilan eksperimen/version/answer key, serta bucket avatar privat. Remote read-only smoke melalui production build Next.js lokal memverifikasi katalog/detail dan penolakan akses anonim ke identitas, private schema dan privileged RPC. Tidak ada deployment aplikasi publik yang tercatat. Estimasi pada section 9 adalah forecast awal, bukan jumlah hari pekerjaan tersisa. Perbarui tabel ini ketika ada bukti implementasi atau verifikasi baru.
+
+### Catatan verifikasi terbaru
+
+- Security advisors remote: tidak ada WARN/ERROR; dua INFO untuk tabel private tanpa policy memang menolak akses anon/authenticated dan hanya dipakai server.
+- Performance advisors remote: empat temuan composite foreign key tanpa covering index diselesaikan oleh migrasi `20261003190637_labora_foreign_key_indexes.sql`. INFO unused index pada database baru tidak menjadi alasan menghapus index sebelum ada traffic.
+- Browser account suite passed pada server development lokal dengan Supabase lokal; production build dan remote read-only smoke diperiksa terpisah. Cookie produksi tetap Secure; flow login penuh masih memerlukan pengujian deployment HTTPS.
+- Fixture browser memakai soft-delete agar tidak menghapus referensi riwayat penilaian yang dipertahankan. Fixture ini menolak Supabase remote.

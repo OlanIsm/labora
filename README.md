@@ -73,7 +73,9 @@ Proposal sebaiknya melengkapi penjelasan ini dengan kebutuhan sekolah sasaran, h
 
 Fitur utama frontend dan backend telah diimplementasikan. Migrasi database lokal, pengujian domain/API/UI dan integrasi lokal, serta build produksi telah dijalankan. Sejumlah alur akun siswa/guru juga telah diperiksa melalui browser.
 
-**Rilis produksi masih memerlukan** inventaris database remote dan migrasi yang sesuai, konfigurasi server/Auth/SMTP/domain, deployment, verifikasi staging, serta penyelesaian pemeriksaan browser lanjutan. Penugasan individual belum tersedia; distribusi saat ini berdasarkan kelas. Lihat [status backend](backend/README.md) untuk batas verifikasi dan pekerjaan yang tersisa.
+Inventaris Supabase remote, verifikasi secret server, dan enam migrasi database sudah selesai. Pemeriksaan browser lanjutan untuk pertanyaan guru, CSV dan catatan lintas perangkat telah lulus lokal; katalog dan pembatasan akses anonim telah diperiksa terhadap database remote melalui API aplikasi.
+
+**Rilis produksi masih memerlukan** konfigurasi Auth/SMTP/domain dan hosting, deployment aplikasi HTTPS, serta verifikasi staging dan operasional. Penugasan individual belum tersedia; distribusi saat ini berdasarkan kelas. Lihat [status backend](backend/README.md) untuk batas verifikasi dan pekerjaan yang tersisa.
 
 ## Teknologi dan struktur
 

@@ -25,6 +25,7 @@ const admin = createClient(
     user_metadata: { name: "Browser Student" },
   });
   assert.equal(error, null);
+  const fixtureUsers = [data.user.id];
   const browser = await chromium.launch();
   try {
     const first = await browser.newContext(),
@@ -49,6 +50,7 @@ const admin = createClient(
       user_metadata: { name: "Browser Teacher" },
     });
     assert.equal(teacherUser.error, null);
+    fixtureUsers.push(teacherUser.data.user.id);
     const teacherContext = await browser.newContext();
     assert.equal(
       (
@@ -92,7 +94,10 @@ const admin = createClient(
       .getByLabel("Pertanyaan", { exact: true })
       .fill("Mengapa indikator berubah warna pada larutan asam?");
     await teacherPage
-      .getByLabel("Penjelasan setelah menjawab", { exact: true })
+      .getByRole("textbox", {
+        name: "Penjelasan setelah menjawab",
+        exact: true,
+      })
       .fill("Indikator merespons ion hidrogen dalam larutan asam.");
     await teacherPage.getByLabel("Terbitkan untuk kelas yang dipilih").check();
     await teacherPage
@@ -120,10 +125,18 @@ const admin = createClient(
       .getByRole("button", { name: "Tambahkan indikator ph", exact: true })
       .click();
     await two
+      .getByText("Mengapa indikator berubah warna pada larutan asam?", {
+        exact: true,
+      })
+      .waitFor();
+    await two
       .getByRole("button", {
         name: /Molekul indikator merespons konsentrasi ion hidrogen/,
       })
       .click();
+    await two
+      .getByText(/Indikator merespons ion hidrogen dalam larutan asam\./)
+      .waitFor();
     await two.getByRole("button", { name: "Lihat hasil eksperimen" }).click();
     await two.waitForURL("**/results/acid-base");
     await two
@@ -153,7 +166,11 @@ const admin = createClient(
       ),
     );
     await one.goto(base + "/sandbox/chemistry");
-    await one.getByText("Tersimpan di akun", { exact: true }).first().waitFor();
+    await one
+      .getByRole("status")
+      .filter({ hasText: "Tersimpan di akun" })
+      .first()
+      .waitFor();
     await one.getByText(/Buku Catatan Lab/).click();
     await one
       .getByLabel("Hipotesis", { exact: true })
@@ -175,7 +192,11 @@ const admin = createClient(
       .click();
     await noteSave;
     await two.goto(base + "/sandbox/chemistry");
-    await two.getByText("Tersimpan di akun", { exact: true }).first().waitFor();
+    await two
+      .getByRole("status")
+      .filter({ hasText: "Tersimpan di akun" })
+      .first()
+      .waitFor();
     await two.getByText(/Buku Catatan Lab/).click();
     await two
       .getByRole("button", { name: "Ekspor teks", exact: true })
@@ -189,11 +210,18 @@ const admin = createClient(
     );
     assert.deepEqual(errors, []);
     console.log(
-      "Account browser passed: HTTP-only login, two independent browser contexts, cross-device guided resume, authoritative score, durable history, and no demo writes.",
+      "Account browser passed: HTTP-only login, two independent contexts, published teacher questions/explanations, guided resume, server scores/history, CSV export, cross-device notebook export, and no demo writes.",
     );
   } finally {
     await browser.close();
-    await admin.auth.admin.deleteUser(data.user.id);
+    for (const userId of fixtureUsers) {
+      // Assessed history retains profile references; soft-delete local fixtures.
+      const { error: cleanupError } = await admin.auth.admin.deleteUser(
+        userId,
+        true,
+      );
+      assert.equal(cleanupError, null, "Local fixture cleanup must succeed.");
+    }
   }
 })().catch((e) => {
   console.error(e);

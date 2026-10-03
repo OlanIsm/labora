@@ -5,7 +5,7 @@
 - **Dasar:** fitur, modul, aset, dan dokumentasi dalam repository Labora.
 - **Tujuan:** acuan produk, desain, dan penyusunan proposal proyek.
 
-Dokumen ini membedakan kemampuan yang sudah diimplementasikan dari sasaran pengembangan. Backend telah diverifikasi secara lokal; deployment publik dan verifikasi lingkungan produksi masih diperlukan. Durasi eksperimen merupakan estimasi katalog, bukan pengukuran pengguna.
+Dokumen ini membedakan kemampuan yang sudah diimplementasikan dari sasaran pengembangan. Backend telah diverifikasi secara lokal, database remote sudah dimigrasikan, dan smoke test akses API remote telah lulus. Deployment publik dan verifikasi akun pada lingkungan produksi HTTPS masih diperlukan. Durasi eksperimen merupakan estimasi katalog, bukan pengukuran pengguna.
 
 **Navigasi dokumen:**
 
@@ -57,16 +57,16 @@ Indikator di atas adalah rancangan evaluasi. Target angka dan kesimpulan efektiv
 
 ### 5. Ruang lingkup dan status
 
-| Area                   | Implementasi saat ini                                                               | Status                                                           |
-| ---------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Landing dan aplikasi   | Halaman publik terpisah dari shell aplikasi; tombol masuk aplikasi menuju dashboard | Tersedia                                                         |
-| Laboratorium           | Kimia, Fisika, Biologi; eksplorasi dan tantangan terpandu                           | Tersedia                                                         |
-| Penilaian              | Sembilan eksperimen, validasi langkah, pertanyaan, hasil dan progres                | Tersedia; backend diuji lokal                                    |
-| Akun                   | Login, pendaftaran, pemulihan, profil, avatar, keluar akun                          | Tersedia; konfigurasi Auth produksi diperlukan                   |
-| Tugas guru             | Draft, instruksi dan pertanyaan khusus, publikasi ke kelas, laporan dan CSV         | Tersedia; alur akun diuji lokal                                  |
-| Penyimpanan            | Sesi terpandu, konfigurasi meja, catatan, notifikasi                                | Tersedia; beberapa pemeriksaan browser lanjutan masih diperlukan |
-| Infrastruktur produksi | Migrasi database, konfigurasi domain/SMTP, staging dan pemulihan                    | Belum selesai diterapkan pada lingkungan produksi                |
-| Penugasan per siswa    | Pemilihan penerima individual                                                       | Pengembangan lanjutan; publikasi saat ini berbasis kelas         |
+| Area                   | Implementasi saat ini                                                               | Status                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Landing dan aplikasi   | Halaman publik terpisah dari shell aplikasi; tombol masuk aplikasi menuju dashboard | Tersedia                                                                |
+| Laboratorium           | Kimia, Fisika, Biologi; eksplorasi dan tantangan terpandu                           | Tersedia                                                                |
+| Penilaian              | Sembilan eksperimen, validasi langkah, pertanyaan, hasil dan progres                | Tersedia; backend diuji lokal                                           |
+| Akun                   | Login, pendaftaran, pemulihan, profil, avatar, keluar akun                          | Tersedia; konfigurasi Auth produksi diperlukan                          |
+| Tugas guru             | Draft, instruksi dan pertanyaan khusus, publikasi ke kelas, laporan dan CSV         | Tersedia; alur akun diuji lokal                                         |
+| Penyimpanan            | Sesi terpandu, konfigurasi meja, catatan, notifikasi                                | Tersedia; browser catatan lintas perangkat dan ekspor telah lulus lokal |
+| Infrastruktur produksi | Migrasi database, konfigurasi domain/SMTP, staging dan pemulihan                    | Belum selesai diterapkan pada lingkungan produksi                       |
+| Penugasan per siswa    | Pemilihan penerima individual                                                       | Pengembangan lanjutan; publikasi saat ini berbasis kelas                |
 
 Di luar ruang lingkup saat ini: simulator universal, sistem administrasi sekolah lengkap, pembayaran, kolaborasi langsung, proctoring, penilaian AI, serta simulasi golongan darah ABO. Eksperimen darah yang tersedia berfokus pada identifikasi jenis sel.
 
@@ -229,8 +229,8 @@ Pembagian fase mengikuti [implementation plan](backend/IMPLEMENTATION_PLAN.md): 
 
 - **V1:** fondasi API, akun dan keanggotaan, katalog versi, sesi terpandu, penilaian, progres serta penyimpanan dasar.
 - **V2:** tugas guru dan laporan, integrasi catatan/notifikasi/avatar dan simpan per subjek, migrasi data lama serta kesiapan operasional.
-- **Status snapshot:** sebagian besar implementasi V1/V2 tersedia dan diuji lokal. Inventaris database remote, konversi data lama bila diperlukan, deployment migrasi dan aplikasi, konfigurasi produksi, serta verifikasi staging masih menjadi syarat rilis.
-- **Verifikasi tersisa:** pemeriksaan browser lanjutan untuk ekspor/catatan dan penyesuaian pertanyaan perlu diselesaikan; penargetan penerima individual belum tersedia.
+- **Status snapshot:** sebagian besar implementasi V1/V2 tersedia dan diuji lokal. Inventaris remote menunjukkan tidak ada data lama; enam migrasi telah diterapkan. Secret server, katalog/API remote, RLS dan pembatasan akses anonim telah diperiksa. Browser pertanyaan/penjelasan guru, CSV dan notebook lintas perangkat telah lulus lokal.
+- **Pekerjaan tersisa:** konfigurasi Auth/SMTP/domain dan hosting, deployment aplikasi HTTPS, verifikasi staging akun serta operasional. Penargetan penerima individual belum tersedia.
 
 Build produksi dan pemeriksaan lokal tidak boleh diterjemahkan sebagai “sudah berjalan di produksi”. Dalam proposal, gunakan “telah dikembangkan dan diverifikasi lokal, dengan tahap deployment dan pilot berikutnya”.
 
