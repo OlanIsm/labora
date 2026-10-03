@@ -3,7 +3,7 @@ import { catalog } from "@/features/laboratory/domain/catalog";
 import type { Discipline, Material } from "@/features/laboratory/domain/types";
 import { useDraggable } from "@dnd-kit/core";
 import { Atom, Leaf, Search, Wrench, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EquipmentDrawing, { hasEquipmentDrawing } from "./EquipmentDrawing";
 const starters: Record<Discipline, string[]> = {
   chemistry: ["beaker", "water", "oil", "nacl", "dropper", "ph-meter"],
@@ -90,6 +90,15 @@ export default function Inventory({
   const [kind, setKind] = useState("all");
   const [showAll, setShowAll] = useState(false);
   const [rackTab, setRackTab] = useState("tools");
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const viewport = window.matchMedia("(max-width: 760px)");
+    const update = () => setCompact(viewport.matches);
+    update();
+    viewport.addEventListener("change", update);
+    return () => viewport.removeEventListener("change", update);
+  }, []);
+  const grouped = discipline === "chemistry" || compact;
   const scroller = useRef<HTMLDivElement>(null);
   const list = catalog
     .filter(
@@ -115,7 +124,7 @@ export default function Inventory({
           ].includes(m.id)) &&
         (kind === "all" || m.kind === kind) &&
         (showAll ||
-          discipline === "chemistry" ||
+          grouped ||
           query.trim() ||
           kind !== "all" ||
           starters[discipline].includes(m.id)) &&
@@ -137,7 +146,7 @@ export default function Inventory({
   return (
     <section id="sandbox-rack" className="sandbox-rack">
       <h2>Alat & bahan</h2>
-      {discipline === "chemistry" && (
+      {grouped && (
         <div
           className="sandbox-panel-tabs"
           role="group"
@@ -177,7 +186,7 @@ export default function Inventory({
           </button>
         )}
       </label>
-      {discipline !== "chemistry" && (
+      {!grouped && (
         <details
           className="sandbox-inventory-more"
           onToggle={(event) => {
@@ -198,7 +207,7 @@ export default function Inventory({
           </label>
         </details>
       )}
-      {discipline === "chemistry" ? (
+      {grouped ? (
         <div
           ref={scroller}
           className="sandbox-rack-groups"

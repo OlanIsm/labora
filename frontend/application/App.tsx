@@ -190,6 +190,9 @@ export default function App() {
   return (
     <Shell
       user={user}
+      assignments={assignments}
+      records={records}
+      onLogout={logout}
       wide={segments[0] === "lab" || isSandbox || !!physicsSimulation}
     >
       {syncError && (

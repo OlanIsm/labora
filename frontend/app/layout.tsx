@@ -4,6 +4,7 @@ import "./physics-sims.css";
 import "./sandbox.css";
 import "./specimens.css";
 import "./styles.css";
+import "./app-shell.css";
 export const metadata = {
   title: "Labora | Laboratorium Sains Virtual",
   icons: {

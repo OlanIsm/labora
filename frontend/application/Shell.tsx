@@ -1,6 +1,9 @@
 "use client";
 
 import type { User } from "@/features/auth/model";
+import type { Assignment } from "@/features/assignments/model";
+import type { RecordEntry } from "@/features/progress/model";
+import { AppHeader } from "./AppHeader";
 import { Logo } from "@/shared/ui/Logo";
 import {
   Beaker,
@@ -18,10 +21,16 @@ import { useEffect, useState } from "react";
 export function Shell({
   children,
   user,
+  assignments,
+  records,
+  onLogout,
   wide = false,
 }: {
   children: React.ReactNode;
   user: User | null;
+  assignments: Assignment[];
+  records: RecordEntry[];
+  onLogout: () => Promise<void>;
   wide?: boolean;
 }) {
   const pathname = usePathname() || "/";
@@ -167,31 +176,13 @@ export function Shell({
         </Link>
       </aside>
       <div className="app-frame" onClickCapture={closeSidebar}>
-        <header className="app-topbar">
-          <div className="mobile-logo">
-            <Logo href="/dashboard" />
-          </div>
-          <span className="topbar-context">
-            {pathname.startsWith("/lab/")
-              ? "Laboratorium virtual"
-              : pathname.startsWith("/teacher")
-                ? "Ruang guru"
-                : "Ruang eksplorasi kamu"}
-          </span>
-          <div className="topbar-profile">
-            <span>
-              {user?.role === "teacher" ? "Guru" : "Siswa"} ·{" "}
-              {user?.name || "Tamu"}
-            </span>
-            <Link
-              href="/settings"
-              className="icon-button mobile-settings"
-              aria-label="Pengaturan akun"
-            >
-              <Settings size={19} />
-            </Link>
-          </div>
-        </header>
+        <AppHeader
+          user={user}
+          pathname={pathname}
+          assignments={assignments}
+          records={records}
+          onLogout={onLogout}
+        />
         <main id="main" className={`page ${wide ? "wide" : ""}`}>
           {children}
         </main>

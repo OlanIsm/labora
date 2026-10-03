@@ -29,7 +29,7 @@ import { findBenchSpace } from "@/features/laboratory/subjects/chemistry/placeme
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
   pointerWithin,
   rectIntersection,
   TouchSensor,
@@ -111,7 +111,7 @@ function Desk({ discipline }: { discipline: Discipline }) {
     lastEvent.current = latest;
   }, [history, speed, ready]);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 180, tolerance: 8 },
     }),
@@ -876,9 +876,11 @@ function Desk({ discipline }: { discipline: Discipline }) {
                   {simpleChemistry ? "Atur benda" : "Benda dipilih"}
                 </button>
               </div>
-              {tab === "rack" && (
+              <div
+                className={`sandbox-inventory-slot ${tab !== "rack" ? "desktop-hidden" : ""}`}
+              >
                 <Inventory discipline={discipline} onAdd={(id) => add(id)} />
-              )}
+              </div>
               {tab === "controls" && (
                 <>
                   {simpleChemistry && (
