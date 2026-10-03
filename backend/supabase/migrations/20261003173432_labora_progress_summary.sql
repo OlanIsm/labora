@@ -27,4 +27,3 @@ REVOKE ALL ON FUNCTION "public"."labora_progress_summary"(uuid) FROM "postgres";
 GRANT EXECUTE ON FUNCTION "public"."labora_progress_summary"(uuid) TO "postgres";
 
 GRANT EXECUTE ON FUNCTION "public"."labora_progress_summary"(uuid) TO "service_role";
-

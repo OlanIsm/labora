@@ -40,4 +40,3 @@ REVOKE ALL ON FUNCTION "public"."labora_assignment_report"(uuid, uuid, integer, 
 GRANT EXECUTE ON FUNCTION "public"."labora_assignment_report"(uuid, uuid, integer, integer) TO "postgres";
 
 GRANT EXECUTE ON FUNCTION "public"."labora_assignment_report"(uuid, uuid, integer, integer) TO "service_role";
-
