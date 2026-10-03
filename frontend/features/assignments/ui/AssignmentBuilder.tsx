@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/infrastructure/api";
 import type { ClassRoom } from "@contracts/laboratory";
+import { RecipientSelector } from "./RecipientSelector";
 
 export function Builder({
   onSave,
@@ -29,6 +30,7 @@ export function Builder({
   const [error, setError] = useState("");
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [classId, setClassId] = useState("");
+  const [studentIds, setStudentIds] = useState<string[] | undefined>();
   const [publish, setPublish] = useState(false);
   const [templateReady, setTemplateReady] = useState(!account);
   const [savedDraft, setSavedDraft] = useState<Assignment | null>(null);
@@ -96,6 +98,8 @@ export function Builder({
     setBusy(true);
     setError("");
     try {
+      if (account && publish && studentIds?.length === 0)
+        throw new Error("Pilih setidaknya satu siswa penerima tugas.");
       const a: Assignment = {
         id: savedDraft?.id || `assignment-${Date.now()}`,
         ...(savedDraft ? { revision: savedDraft.revision } : {}),
@@ -115,6 +119,7 @@ export function Builder({
           body: JSON.stringify({
             revision: saved?.revision ?? 0,
             classIds: [classId],
+            studentIds,
           }),
         });
       router.push(`/teacher/results/${id}`);
@@ -180,6 +185,7 @@ export function Builder({
                     value={classId}
                     onChange={(e) => {
                       setClassId(e.target.value);
+                      setStudentIds(undefined);
                       setClassName(
                         classes.find((c) => c.id === e.target.value)?.name ||
                           "",
@@ -204,6 +210,13 @@ export function Builder({
                 )}
               </label>
             </div>
+            {account && (
+              <RecipientSelector
+                classId={classId}
+                studentIds={studentIds}
+                onChange={setStudentIds}
+              />
+            )}
             <label>
               Judul tugas
               <input
@@ -349,13 +362,13 @@ export function Builder({
                 Tugas disimpan sebagai draf sebelum diterbitkan. Siswa menerima
                 versi yang sudah diterbitkan.
               </p>
-              <label>
+              <label className="assignment-publish">
                 <input
                   type="checkbox"
                   checked={publish}
                   onChange={(e) => setPublish(e.target.checked)}
                 />{" "}
-                Terbitkan untuk kelas yang dipilih
+                Terbitkan untuk penerima yang dipilih
               </label>
               {!classes.length && (
                 <Link href="/settings">Buat kelas di pengaturan</Link>

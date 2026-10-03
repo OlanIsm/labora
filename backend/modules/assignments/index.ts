@@ -41,6 +41,9 @@ async function assignmentDTO(
   }
   return {
     ...config,
+    ...(teacher && row.published_version_id && config.audience === "students"
+      ? { studentIds: await individualTargets(row.id) }
+      : { studentIds: undefined }),
     id: row.id,
     experimentId: row.experiment_id,
     title: row.title,
@@ -54,6 +57,15 @@ async function assignmentDTO(
       ...(!teacher ? { answer: undefined, explanation: undefined } : {}),
     })),
   };
+}
+async function individualTargets(id: string) {
+  const { data, error } = await adminDatabase()
+    .from("assignment_targets")
+    .select("student_id")
+    .eq("assignment_id", id)
+    .not("student_id", "is", null);
+  databaseError(error);
+  return data?.length ? data.map((target) => target.student_id!) : undefined;
 }
 export async function listAssignments(request: Request) {
   const { user } = await requireIdentity(),
@@ -267,7 +279,7 @@ export async function updateAssignment(request: Request, id: string) {
 }
 export async function publishAssignment(request: Request, id: string) {
   const body = await readJson(request);
-  fields(body, ["revision", "classIds"]);
+  fields(body, ["revision", "classIds", "studentIds"]);
   const revision = integer(body.revision, "revision"),
     { user, row } = await ownedAssignment(id);
   if (
@@ -276,12 +288,31 @@ export async function publishAssignment(request: Request, id: string) {
     body.classIds.length > 20
   )
     throw new AppError("VALIDATION_ERROR");
-  const classes = [...new Set(body.classIds.map((c) => uuid(c, "classIds")))];
+  const classes = [
+    ...new Set(body.classIds.map((c) => uuid(c, "classIds"))),
+  ].sort();
+  if (
+    body.studentIds !== undefined &&
+    (!Array.isArray(body.studentIds) ||
+      !body.studentIds.length ||
+      body.studentIds.length > 1000)
+  )
+    throw new AppError("VALIDATION_ERROR");
+  const students =
+    body.studentIds === undefined
+      ? undefined
+      : [
+          ...new Set(
+            (body.studentIds as unknown[]).map((s) => uuid(s, "studentIds")),
+          ),
+        ].sort();
   if (row.status === "published") {
     const existing = await assignmentDTO(row, true);
     if (
       JSON.stringify([...(existing.classIds || [])].sort()) !==
-      JSON.stringify([...classes].sort())
+        JSON.stringify([...classes].sort()) ||
+      JSON.stringify([...(existing.studentIds || [])].sort()) !==
+        JSON.stringify([...(students || [])].sort())
     )
       throw new AppError("REVISION_CONFLICT");
     return existing;
@@ -300,6 +331,8 @@ export async function publishAssignment(request: Request, id: string) {
   const publicConfig = {
     ...config,
     classIds: classes,
+    audience: students ? "students" : "class",
+    selectedStudentCount: students?.length,
     stages: config.stages.map(({ answer, explanation, ...s }) => s),
   };
   const { data: rooms, error: roomError } = await adminDatabase()
@@ -316,6 +349,7 @@ export async function publishAssignment(request: Request, id: string) {
     public_config: publicConfig,
     keys: toJson(keys),
     classes,
+    ...(students ? { students } : {}),
   });
   databaseError(error);
   return assignmentDTO(data as unknown as AssignmentRow, true);

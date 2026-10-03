@@ -91,6 +91,12 @@ const admin = createClient(
       .fill("Browser Assignment");
     await teacherPage.getByLabel(/Kelas atau kelompok/).selectOption(room.id);
     await teacherPage
+      .getByRole("radio", { name: "Siswa tertentu", exact: true })
+      .check();
+    await teacherPage
+      .getByRole("checkbox", { name: "Browser Student", exact: true })
+      .check();
+    await teacherPage
       .getByLabel("Pertanyaan", { exact: true })
       .fill("Mengapa indikator berubah warna pada larutan asam?");
     await teacherPage
@@ -99,11 +105,36 @@ const admin = createClient(
         exact: true,
       })
       .fill("Indikator merespons ion hidrogen dalam larutan asam.");
-    await teacherPage.getByLabel("Terbitkan untuk kelas yang dipilih").check();
+    await teacherPage
+      .getByLabel("Terbitkan untuk penerima yang dipilih")
+      .check();
+    if (process.env.LABORA_REVIEW_DIR) {
+      const selector = teacherPage.getByRole("group", {
+        name: "Penerima tugas",
+      });
+      await selector.scrollIntoViewIfNeeded();
+      await teacherPage.screenshot({
+        path: `${process.env.LABORA_REVIEW_DIR}/recipient-desktop.png`,
+      });
+      await teacherPage.setViewportSize({ width: 390, height: 844 });
+      await selector.scrollIntoViewIfNeeded();
+      assert.equal(
+        await teacherPage.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        false,
+        "Mobile builder must not overflow horizontally",
+      );
+      await teacherPage.screenshot({
+        path: `${process.env.LABORA_REVIEW_DIR}/recipient-mobile.png`,
+      });
+      await teacherPage.setViewportSize({ width: 1280, height: 720 });
+    }
     await teacherPage
       .getByRole("button", { name: "Simpan tugas", exact: true })
       .click();
     await teacherPage.waitForURL("**/teacher/results/*");
+    await teacherPage.getByText(/1 siswa dipilih/).waitFor();
     const assignmentId = new URL(teacherPage.url()).pathname.split("/").pop();
     await one.goto(
       base + `/challenges/run/acid-base?assignment=${assignmentId}`,

@@ -2204,6 +2204,37 @@ form textarea {
 .builder-section h2 {
   margin-bottom: 20px;
 }
+.assignment-recipients {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 24px 0;
+  grid-column: 1 / -1;
+}
+.assignment-recipients legend {
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+.assignment-recipients label,
+.assignment-publish {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.assignment-recipients input,
+.assignment-publish input {
+  width: 20px;
+  min-height: 20px;
+  height: 20px;
+  accent-color: var(--blue-ink);
+}
+.assignment-member-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
 .builder-section > p {
   margin-bottom: 24px;
 }

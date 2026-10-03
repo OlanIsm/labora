@@ -14,6 +14,10 @@ export type AssignmentDTO = {
   instructions: string;
   className: string;
   classIds?: string[];
+  /** Teacher-only recipient IDs. Omitted for whole-class publication. */
+  studentIds?: string[];
+  audience?: "class" | "students";
+  selectedStudentCount?: number;
   stages: {
     instruction: string;
     hint: string;

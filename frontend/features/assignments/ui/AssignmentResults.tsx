@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/infrastructure/api";
 import type { AssignmentReport, ClassRoom } from "@contracts/laboratory";
 import { download, csvCell } from "@/shared/infrastructure/download";
+import { RecipientSelector } from "./RecipientSelector";
 
 export function AssignmentResults({
   assignment,
@@ -28,6 +29,7 @@ export function AssignmentResults({
     [busy, setBusy] = useState(false),
     [classes, setClasses] = useState<ClassRoom[]>([]),
     [classId, setClassId] = useState("");
+  const [studentIds, setStudentIds] = useState<string[] | undefined>();
   const id = assignment?.id;
   useEffect(() => {
     if (!account || !id) return;
@@ -86,6 +88,8 @@ export function AssignmentResults({
         <h1>{assignment.title}</h1>
         <p>
           {exp.title} · {assignment.className}
+          {assignment.audience === "students" &&
+            ` · ${assignment.selectedStudentCount} siswa dipilih`}
         </p>
         {!account && (
           <Link
@@ -103,6 +107,10 @@ export function AssignmentResults({
               setBusy(true);
               setError("");
               try {
+                if (studentIds?.length === 0)
+                  throw new Error(
+                    "Pilih setidaknya satu siswa penerima tugas.",
+                  );
                 const a = await apiFetch<Assignment>(
                   `/assignments/${id}/publish`,
                   {
@@ -110,6 +118,7 @@ export function AssignmentResults({
                     body: JSON.stringify({
                       revision: assignment!.revision,
                       classIds: [classId],
+                      studentIds,
                     }),
                   },
                 );
@@ -133,7 +142,10 @@ export function AssignmentResults({
               <select
                 required
                 value={classId}
-                onChange={(e) => setClassId(e.target.value)}
+                onChange={(e) => {
+                  setClassId(e.target.value);
+                  setStudentIds(undefined);
+                }}
               >
                 <option value="">Pilih kelas</option>
                 {classes.map((c) => (
@@ -143,6 +155,11 @@ export function AssignmentResults({
                 ))}
               </select>
             </label>
+            <RecipientSelector
+              classId={classId}
+              studentIds={studentIds}
+              onChange={setStudentIds}
+            />
             <button className="button primary" disabled={busy}>
               Terbitkan tugas
             </button>

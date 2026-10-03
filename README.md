@@ -44,7 +44,7 @@ Tiga demonstrasi utama adalah **asam/basa, Hukum Ohm, dan mikroskop**. Identifik
 
 ### Tugas dan penilaian guru
 
-Guru memilih eksperimen, membuat draft tugas, menyesuaikan instruksi serta pertanyaan pada tahap yang tersedia, lalu menerbitkannya ke kelas. Laporan menampilkan penyelesaian dan hasil siswa, dengan ekspor CSV.
+Guru memilih eksperimen, membuat draft tugas, menyesuaikan instruksi serta pertanyaan pada tahap yang tersedia, lalu menerbitkannya ke seluruh kelas atau siswa tertentu. Laporan menampilkan penyelesaian dan hasil siswa, dengan ekspor CSV.
 
 Nilai akun dihitung server dengan bobot **40% akurasi eksperimen dan 60% akurasi kuis**. Hasil final dipertahankan per attempt; laporan tugas menggunakan nilai terbaik dari pengerjaan yang selesai.
 
@@ -73,9 +73,9 @@ Proposal sebaiknya melengkapi penjelasan ini dengan kebutuhan sekolah sasaran, h
 
 Fitur utama frontend dan backend telah diimplementasikan. Migrasi database lokal, pengujian domain/API/UI dan integrasi lokal, serta build produksi telah dijalankan. Sejumlah alur akun siswa/guru juga telah diperiksa melalui browser.
 
-Inventaris Supabase remote, verifikasi secret server, dan enam migrasi database sudah selesai. Pemeriksaan browser lanjutan untuk pertanyaan guru, CSV dan catatan lintas perangkat telah lulus lokal; katalog dan pembatasan akses anonim telah diperiksa terhadap database remote melalui API aplikasi.
+Inventaris Supabase remote, verifikasi secret server, dan tujuh migrasi database sudah selesai. Pemeriksaan browser lanjutan untuk pertanyaan guru, CSV dan catatan lintas perangkat telah lulus lokal; katalog dan pembatasan akses anonim telah diperiksa terhadap database remote melalui API aplikasi.
 
-**Rilis produksi masih memerlukan** konfigurasi Auth/SMTP/domain dan hosting, deployment aplikasi HTTPS, serta verifikasi staging dan operasional. Penugasan individual belum tersedia; distribusi saat ini berdasarkan kelas. Lihat [status backend](backend/README.md) untuk batas verifikasi dan pekerjaan yang tersisa.
+**Rilis produksi masih memerlukan** konfigurasi Auth/SMTP/domain dan hosting, deployment aplikasi HTTPS, serta verifikasi staging dan operasional. Penugasan kelas dan siswa individual telah tersedia serta diuji lokal. Lihat [status backend](backend/README.md) untuk batas verifikasi dan pekerjaan yang tersisa.
 
 ## Teknologi dan struktur
 

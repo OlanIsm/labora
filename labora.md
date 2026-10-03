@@ -66,7 +66,7 @@ Indikator di atas adalah rancangan evaluasi. Target angka dan kesimpulan efektiv
 | Tugas guru             | Draft, instruksi dan pertanyaan khusus, publikasi ke kelas, laporan dan CSV         | Tersedia; alur akun diuji lokal                                         |
 | Penyimpanan            | Sesi terpandu, konfigurasi meja, catatan, notifikasi                                | Tersedia; browser catatan lintas perangkat dan ekspor telah lulus lokal |
 | Infrastruktur produksi | Migrasi database, konfigurasi domain/SMTP, staging dan pemulihan                    | Belum selesai diterapkan pada lingkungan produksi                       |
-| Penugasan per siswa    | Pemilihan penerima individual                                                       | Pengembangan lanjutan; publikasi saat ini berbasis kelas                |
+| Penugasan per siswa    | Pemilihan penerima individual dari kelas guru                                       | Tersedia; API/RLS dan browser flow diuji lokal                          |
 
 Di luar ruang lingkup saat ini: simulator universal, sistem administrasi sekolah lengkap, pembayaran, kolaborasi langsung, proctoring, penilaian AI, serta simulasi golongan darah ABO. Eksperimen darah yang tersedia berfokus pada identifikasi jenis sel.
 
@@ -229,8 +229,8 @@ Pembagian fase mengikuti [implementation plan](backend/IMPLEMENTATION_PLAN.md): 
 
 - **V1:** fondasi API, akun dan keanggotaan, katalog versi, sesi terpandu, penilaian, progres serta penyimpanan dasar.
 - **V2:** tugas guru dan laporan, integrasi catatan/notifikasi/avatar dan simpan per subjek, migrasi data lama serta kesiapan operasional.
-- **Status snapshot:** sebagian besar implementasi V1/V2 tersedia dan diuji lokal. Inventaris remote menunjukkan tidak ada data lama; enam migrasi telah diterapkan. Secret server, katalog/API remote, RLS dan pembatasan akses anonim telah diperiksa. Browser pertanyaan/penjelasan guru, CSV dan notebook lintas perangkat telah lulus lokal.
-- **Pekerjaan tersisa:** konfigurasi Auth/SMTP/domain dan hosting, deployment aplikasi HTTPS, verifikasi staging akun serta operasional. Penargetan penerima individual belum tersedia.
+- **Status snapshot:** sebagian besar implementasi V1/V2 tersedia dan diuji lokal. Inventaris remote menunjukkan tidak ada data lama; tujuh migrasi telah diterapkan. Secret server, katalog/API remote, RLS dan pembatasan akses anonim telah diperiksa. Browser pertanyaan/penjelasan guru, CSV dan notebook lintas perangkat telah lulus lokal.
+- **Pekerjaan tersisa:** konfigurasi Auth/SMTP/domain dan hosting, deployment aplikasi HTTPS, verifikasi staging akun serta operasional. Penargetan penerima individual sudah tersedia dan diuji lokal.
 
 Build produksi dan pemeriksaan lokal tidak boleh diterjemahkan sebagai “sudah berjalan di produksi”. Dalam proposal, gunakan “telah dikembangkan dan diverifikasi lokal, dengan tahap deployment dan pilot berikutnya”.
 

@@ -925,6 +925,7 @@ export type Database = {
       labora_progress_summary: { Args: { actor: string }; Returns: Json };
       labora_publish: {
         Args: {
+          students?: string[];
           actor: string;
           assignment: string;
           classes: string[];

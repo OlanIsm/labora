@@ -149,6 +149,103 @@ async function main() {
     404,
   );
 
+  const targeted = await api(teacher, "/assignments", "POST", {
+    schoolId: school.id,
+    experimentId: "acid-base",
+    title: "Selected students only",
+    instructions: draft.instructions,
+    stages: draft.stages,
+  });
+  await api(
+    teacher,
+    `/assignments/${targeted.id}/publish`,
+    "POST",
+    {
+      revision: 0,
+      classIds: [room.id],
+      studentIds: [],
+    },
+    422,
+  );
+  await api(
+    teacher,
+    `/assignments/${targeted.id}/publish`,
+    "POST",
+    {
+      revision: 0,
+      classIds: [room.id],
+      studentIds: [other.id],
+    },
+    403,
+  );
+  assert.equal(
+    (await api(teacher, `/assignments/${targeted.id}`)).status,
+    "draft",
+  );
+  assert.equal(
+    (await api(teacher, `/assignments/${targeted.id}/results`)).total,
+    0,
+  );
+  const otherInvite = await api(teacher, "/invitations", "POST", {
+    schoolId: school.id,
+    classId: room.id,
+    email: other.email,
+    maxUses: 1,
+  });
+  await api(other, "/invitations/accept", "POST", { token: otherInvite.token });
+  const selected = await api(
+    teacher,
+    `/assignments/${targeted.id}/publish`,
+    "POST",
+    {
+      revision: 0,
+      classIds: [room.id],
+      studentIds: [student.id, student.id],
+    },
+  );
+  assert.deepEqual(selected.studentIds, [student.id]);
+  assert.equal(selected.audience, "students");
+  assert.equal(selected.selectedStudentCount, 1);
+  assert.equal(
+    (await api(teacher, `/assignments/${targeted.id}/results`)).total,
+    1,
+  );
+  const visible = await api(student, `/assignments/${targeted.id}`);
+  assert.equal(
+    visible.studentIds,
+    undefined,
+    "Student identities stay teacher-only",
+  );
+  await api(teacher, `/assignments/${targeted.id}/publish`, "POST", {
+    revision: 0,
+    classIds: [room.id],
+    studentIds: [student.id],
+  });
+  await api(
+    teacher,
+    `/assignments/${targeted.id}/publish`,
+    "POST",
+    {
+      revision: 0,
+      classIds: [room.id],
+      studentIds: [other.id],
+    },
+    409,
+  );
+  await api(other, `/assignments/${targeted.id}`, "GET", undefined, 404);
+  assert.equal((await api(other, "/assignments")).length, 0);
+  await api(
+    other,
+    "/sessions",
+    "POST",
+    {
+      experimentId: "acid-base",
+      assignmentId: targeted.id,
+      eventId: randomUUID(),
+    },
+    404,
+  );
+
   for (const exp of experiments) {
     const eventId = randomUUID(),
       assignmentId = exp.id === "acid-base" ? draft.id : undefined;
@@ -258,7 +355,7 @@ async function main() {
   assert.equal(reportPage.results.length, 0);
   assert.equal((await api(other, "/progress")).length, 0);
   const notifications = await api(student, "/notifications");
-  assert.equal(notifications.length, 10);
+  assert.equal(notifications.length, 11);
   await api(student, "/notifications", "PATCH", { all: true });
   assert.ok((await api(student, "/notifications")).every((n: any) => n.readAt));
 
@@ -311,6 +408,24 @@ async function main() {
     [],
   );
   assert.deepEqual((await direct.from("lab_sessions").select("*")).data, []);
+  assert.deepEqual(
+    (await direct.from("assignment_recipients").select("*")).data,
+    [],
+  );
+  assert.deepEqual((await direct.from("notifications").select("*")).data, []);
+  assert.ok(
+    (
+      await direct.rpc("labora_publish", {
+        actor: teacher.id,
+        assignment: targeted.id,
+        expected_revision: 0,
+        classes: [room.id],
+        students: [other.id],
+        public_config: {},
+        keys: {},
+      })
+    ).error,
+  );
   assert.ok(
     (
       await direct.rpc("labora_create_school", {
