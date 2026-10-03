@@ -58,27 +58,27 @@ Use UUID primary keys for account-owned records, `timestamptz` timestamps, forei
 
 ### Identity and minimal classroom scope
 
-| Table | Proposed important columns | Purpose / constraints |
-| --- | --- | --- |
-| `profiles` | `id` → `auth.users`, `display_name`, `avatar_path`, `preferences jsonb`, `created_at`, `updated_at` | Public application profile. Preferences have a validated shape. Passwords and email authentication stay in Supabase Auth. |
-| `schools` | `id`, `name`, `owner_id` → profiles, `created_at` | Tenant identity, including a small workspace for a teacher starting independently. |
-| `school_members` | `school_id`, `user_id`, `role`, `status`, `joined_at` | Composite PK `(school_id, user_id)`. Role is `student` or `teacher`, assigned through authorized enrollment. |
-| `classes` | `id`, `school_id`, `teacher_id`, `name`, `archived_at`, `created_at` | Minimal teacher-owned class. A class name is a display label, never an authorization key. |
-| `class_members` | `class_id`, `student_id`, `joined_at`, `left_at` | Unique class/student membership. Student must belong to the class's school. |
-| `invitations` | `id`, `school_id`, `class_id?`, `invited_email?`, `role`, `token_hash`, `created_by`, `expires_at`, `max_uses`, `uses`, `revoked_at` | Expiring enrollment links/codes. Store hashes, not raw reusable secrets. Teacher invitations require authorized school ownership; students cannot request a teacher role. |
+| Table            | Proposed important columns                                                                                                           | Purpose / constraints                                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`       | `id` → `auth.users`, `display_name`, `avatar_path`, `preferences jsonb`, `created_at`, `updated_at`                                  | Public application profile. Preferences have a validated shape. Passwords and email authentication stay in Supabase Auth.                                                 |
+| `schools`        | `id`, `name`, `owner_id` → profiles, `created_at`                                                                                    | Tenant identity, including a small workspace for a teacher starting independently.                                                                                        |
+| `school_members` | `school_id`, `user_id`, `role`, `status`, `joined_at`                                                                                | Composite PK `(school_id, user_id)`. Role is `student` or `teacher`, assigned through authorized enrollment.                                                              |
+| `classes`        | `id`, `school_id`, `teacher_id`, `name`, `archived_at`, `created_at`                                                                 | Minimal teacher-owned class. A class name is a display label, never an authorization key.                                                                                 |
+| `class_members`  | `class_id`, `student_id`, `joined_at`, `left_at`                                                                                     | Unique class/student membership. Student must belong to the class's school.                                                                                               |
+| `invitations`    | `id`, `school_id`, `class_id?`, `invited_email?`, `role`, `token_hash`, `created_by`, `expires_at`, `max_uses`, `uses`, `revoked_at` | Expiring enrollment links/codes. Store hashes, not raw reusable secrets. Teacher invitations require authorized school ownership; students cannot request a teacher role. |
 
 A teacher may create their own school/workspace, becoming its initial teacher/owner through one controlled transaction. Joining another school or class requires an invitation. No attendance, billing, timetables, or separate school-admin dashboard is included.
 
 ### Catalog and teacher assignments
 
-| Table | Proposed important columns | Purpose / constraints |
-| --- | --- | --- |
-| `experiments` | `id text`, `subject`, `title`, `summary`, `duration_minutes`, `current_version_id`, `published`, `created_at` | Searchable metadata for the nine guided experiments. Subjects are Chemistry, Physics, and Biology. |
-| `experiment_versions` | `id`, `experiment_id`, `version`, `definition jsonb`, `engine_version`, `created_at` | Immutable released definitions with steps, equipment and public questions. Unique `(experiment_id, version)`. Definitions exclude correct answers. |
-| `assignments` | `id`, `school_id`, `teacher_id`, `experiment_id`, `title`, `status`, `due_at?`, `draft_config jsonb`, `published_version_id?`, `created_at`, `updated_at` | Teacher-owned draft/publication lifecycle. Draft config has explicit instructions, allowed actions, hints, questions and scoring rules. |
-| `assignment_versions` | `id`, `assignment_id`, `version`, `experiment_version_id`, `config jsonb`, `published_at` | Immutable compiled activity, pinned to an experiment version. Unique `(assignment_id, version)`. Editing a publication creates another version. |
-| `assignment_targets` | `id`, `assignment_id`, `class_id?`, `student_id?` | Exactly one class or individual student per row. Targets must belong to the assignment's school and teacher's authorized scope. |
-| `assignment_recipients` | `assignment_version_id`, `student_id`, `source_class_id?`, `assigned_at` | Unique `(assignment_version_id, student_id)`. Publication freezes the student roster so completion percentages have a stable denominator. |
+| Table                   | Proposed important columns                                                                                                                                | Purpose / constraints                                                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `experiments`           | `id text`, `subject`, `title`, `summary`, `duration_minutes`, `current_version_id`, `published`, `created_at`                                             | Searchable metadata for the nine guided experiments. Subjects are Chemistry, Physics, and Biology.                                                 |
+| `experiment_versions`   | `id`, `experiment_id`, `version`, `definition jsonb`, `engine_version`, `created_at`                                                                      | Immutable released definitions with steps, equipment and public questions. Unique `(experiment_id, version)`. Definitions exclude correct answers. |
+| `assignments`           | `id`, `school_id`, `teacher_id`, `experiment_id`, `title`, `status`, `due_at?`, `draft_config jsonb`, `published_version_id?`, `created_at`, `updated_at` | Teacher-owned draft/publication lifecycle. Draft config has explicit instructions, allowed actions, hints, questions and scoring rules.            |
+| `assignment_versions`   | `id`, `assignment_id`, `version`, `experiment_version_id`, `config jsonb`, `published_at`                                                                 | Immutable compiled activity, pinned to an experiment version. Unique `(assignment_id, version)`. Editing a publication creates another version.    |
+| `assignment_targets`    | `id`, `assignment_id`, `class_id?`, `student_id?`                                                                                                         | Exactly one class or individual student per row. Targets must belong to the assignment's school and teacher's authorized scope.                    |
+| `assignment_recipients` | `assignment_version_id`, `student_id`, `source_class_id?`, `assigned_at`                                                                                  | Unique `(assignment_version_id, student_id)`. Publication freezes the student roster so completion percentages have a stable denominator.          |
 
 Students joining a class after publication do not silently change an existing assignment's recipient list. A teacher can explicitly assign that published version to the new students. Repeat targeting through multiple classes must not duplicate recipients.
 
@@ -86,15 +86,15 @@ JSONB is appropriate for variable experiment definitions and validated stage con
 
 ### Runtime, assessment and supporting data
 
-| Table | Proposed important columns | Purpose / constraints |
-| --- | --- | --- |
-| `lab_sessions` | `id`, `student_id`, `mode`, `subject`, `simulation_key?`, `experiment_version_id?`, `assignment_version_id?`, `status`, `current_step`, `state jsonb`, `state_version`, `revision`, `started_at`, `last_saved_at`, `submitted_at?` | Every guided attempt is its own session. Sandbox sessions store versioned bench/simulation saves. Guided sessions require an experiment version; assignment attempts require valid recipient access. |
-| `lab_actions` | `id`, `session_id`, `client_event_id`, `sequence`, `action_type`, `payload jsonb`, `accepted`, `feedback`, `created_at` | Assessed action history, including useful incorrect actions. Unique event IDs prevent duplicate effects; sequence/revision checks handle conflicting saves. Free animation frames are not recorded here. |
-| `quiz_responses` | `id`, `session_id`, `question_key`, `attempt_no`, `answer jsonb`, `is_correct`, `points_awarded`, `answered_at` | Append-only answers and attempts. Supports MCQ, true/false and prediction questions. Unique `(session_id, question_key, attempt_no)`. Correctness and points are server-generated. |
-| `experiment_results` | `id`, `session_id`, `student_id`, `experiment_version_id`, `assignment_version_id?`, `experiment_accuracy`, `quiz_accuracy`, `score`, `steps_completed`, `steps_total`, `scoring_version`, `observations jsonb`, `completed_at` | One immutable result per submitted session. Percentages constrained to 0–100. Each retry creates another session/result rather than overwriting history. |
-| `lab_notes` | `id`, `session_id`, `author_id`, `hypothesis`, `observation`, `conclusion`, `measurement_snapshot jsonb`, `created_at`, `updated_at` | Account-owned notebook entries and exportable observations. Notes are saved separately from bench rendering state. |
-| `notifications` | `id`, `recipient_id`, `type`, `assignment_version_id?`, `result_id?`, `dedupe_key`, `read_at?`, `created_at` | Real assignment/result notifications. Unique recipient/dedupe key prevents retry duplicates. All read state is account-scoped. |
-| `private.answer_keys` | `id`, `experiment_version_id?`, `assignment_version_id?`, `question_key`, `correct_answer jsonb`, `explanation`, `rubric jsonb` | Private, unexposed schema. Exactly one version parent; unique question key within its parent. Only authorized backend grading/teacher editing paths can access it. |
+| Table                 | Proposed important columns                                                                                                                                                                                                         | Purpose / constraints                                                                                                                                                                                    |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lab_sessions`        | `id`, `student_id`, `mode`, `subject`, `simulation_key?`, `experiment_version_id?`, `assignment_version_id?`, `status`, `current_step`, `state jsonb`, `state_version`, `revision`, `started_at`, `last_saved_at`, `submitted_at?` | Every guided attempt is its own session. Sandbox sessions store versioned bench/simulation saves. Guided sessions require an experiment version; assignment attempts require valid recipient access.     |
+| `lab_actions`         | `id`, `session_id`, `client_event_id`, `sequence`, `action_type`, `payload jsonb`, `accepted`, `feedback`, `created_at`                                                                                                            | Assessed action history, including useful incorrect actions. Unique event IDs prevent duplicate effects; sequence/revision checks handle conflicting saves. Free animation frames are not recorded here. |
+| `quiz_responses`      | `id`, `session_id`, `question_key`, `attempt_no`, `answer jsonb`, `is_correct`, `points_awarded`, `answered_at`                                                                                                                    | Append-only answers and attempts. Supports MCQ, true/false and prediction questions. Unique `(session_id, question_key, attempt_no)`. Correctness and points are server-generated.                       |
+| `experiment_results`  | `id`, `session_id`, `student_id`, `experiment_version_id`, `assignment_version_id?`, `experiment_accuracy`, `quiz_accuracy`, `score`, `steps_completed`, `steps_total`, `scoring_version`, `observations jsonb`, `completed_at`    | One immutable result per submitted session. Percentages constrained to 0–100. Each retry creates another session/result rather than overwriting history.                                                 |
+| `lab_notes`           | `id`, `session_id`, `author_id`, `hypothesis`, `observation`, `conclusion`, `measurement_snapshot jsonb`, `created_at`, `updated_at`                                                                                               | Account-owned notebook entries and exportable observations. Notes are saved separately from bench rendering state.                                                                                       |
+| `notifications`       | `id`, `recipient_id`, `type`, `assignment_version_id?`, `result_id?`, `dedupe_key`, `read_at?`, `created_at`                                                                                                                       | Real assignment/result notifications. Unique recipient/dedupe key prevents retry duplicates. All read state is account-scoped.                                                                           |
+| `private.answer_keys` | `id`, `experiment_version_id?`, `assignment_version_id?`, `question_key`, `correct_answer jsonb`, `explanation`, `rubric jsonb`                                                                                                    | Private, unexposed schema. Exactly one version parent; unique question key within its parent. Only authorized backend grading/teacher editing paths can access it.                                       |
 
 Keep answer keys out of the public definition JSON and out of browser bundles. Return feedback after an authorized answer according to the activity's review policy. Prediction questions are structured choice/true-false questions in the first release; free-text predictions may be saved as notes, but are not presented as automatically graded answers.
 
@@ -113,12 +113,12 @@ Use cookie-backed Supabase sessions with `@supabase/ssr`, verified server identi
 
 Store authorization in server-managed membership rows. User metadata may contain a display name, but cannot grant teacher permissions or class access. Students cannot grant themselves school/class membership by changing a profile field. Enable RLS on all exposed tables and define explicit ownership/membership predicates and mutation checks. See [Supabase RLS guidance](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
-| Actor | Allowed access |
-| --- | --- |
-| Guest/demo | Public catalog and local simulations. No school data or official grades. |
-| Student | Own profile, sessions, answers, notes, results and notifications; published assignments addressed to them. |
-| Teacher | Own/authorized classes, assignment drafts and publications, and students' attempts for those assignments. No unrestricted access to all students in a school. |
-| Backend grading/enrollment operation | Narrow verified operations only; keys remain server-side and actor identity comes from the verified request. |
+| Actor                                | Allowed access                                                                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Guest/demo                           | Public catalog and local simulations. No school data or official grades.                                                                                      |
+| Student                              | Own profile, sessions, answers, notes, results and notifications; published assignments addressed to them.                                                    |
+| Teacher                              | Own/authorized classes, assignment drafts and publications, and students' attempts for those assignments. No unrestricted access to all students in a school. |
+| Backend grading/enrollment operation | Narrow verified operations only; keys remain server-side and actor identity comes from the verified request.                                                  |
 
 Normal data access uses the authenticated user's Supabase context so RLS remains active. Exceptional grading/enrollment operations use narrowly granted internal database functions with explicit actor/scope checks. Do not expose a generic privileged query endpoint or accept client-provided scores, completion flags, recipients, role changes or answer correctness.
 
@@ -146,36 +146,36 @@ Success responses use `{ "data": ..., "requestId": "..." }`. Errors use the foll
 
 `fieldErrors` is optional. Messages are safe Indonesian text; codes are stable identifiers. Include `X-Request-Id` on every API response. Never return SQL, stack traces, raw auth provider errors, credentials or internal table names.
 
-| HTTP | Code | Client behavior |
-| --- | --- | --- |
-| 400 | `BAD_REQUEST` | Correct malformed JSON/request shape; do not retry automatically |
-| 401 | `UNAUTHENTICATED` / `INVALID_CREDENTIALS` | Expired session requires login; failed login stays on the form |
-| 403 | `FORBIDDEN` | Show access explanation; never downgrade to a local school account |
-| 404 | `NOT_FOUND` | Show missing/inaccessible resource without disclosing another user's data |
-| 405 | `METHOD_NOT_ALLOWED` | Use the documented operation for this endpoint |
-| 409 | `REVISION_CONFLICT` / `IDEMPOTENCY_CONFLICT` | Preserve draft; fetch canonical session and reconcile |
-| 413 | `PAYLOAD_TOO_LARGE` | Reduce snapshot/file size |
-| 415 | `UNSUPPORTED_MEDIA_TYPE` | Use supported request/upload format |
-| 422 | `VALIDATION_ERROR` | Map `fieldErrors` to form controls |
-| 429 | `RATE_LIMITED` | Respect `Retry-After`; preserve input |
-| 503 | `SERVICE_UNAVAILABLE` / `NOT_CONFIGURED` | Show connection/setup failure; preserve draft and allow retry |
-| 500 | `INTERNAL_ERROR` | Show generic failure with request ID; no blind mutation retries |
+| HTTP | Code                                         | Client behavior                                                           |
+| ---- | -------------------------------------------- | ------------------------------------------------------------------------- |
+| 400  | `BAD_REQUEST`                                | Correct malformed JSON/request shape; do not retry automatically          |
+| 401  | `UNAUTHENTICATED` / `INVALID_CREDENTIALS`    | Expired session requires login; failed login stays on the form            |
+| 403  | `FORBIDDEN`                                  | Show access explanation; never downgrade to a local school account        |
+| 404  | `NOT_FOUND`                                  | Show missing/inaccessible resource without disclosing another user's data |
+| 405  | `METHOD_NOT_ALLOWED`                         | Use the documented operation for this endpoint                            |
+| 409  | `REVISION_CONFLICT` / `IDEMPOTENCY_CONFLICT` | Preserve draft; fetch canonical session and reconcile                     |
+| 413  | `PAYLOAD_TOO_LARGE`                          | Reduce snapshot/file size                                                 |
+| 415  | `UNSUPPORTED_MEDIA_TYPE`                     | Use supported request/upload format                                       |
+| 422  | `VALIDATION_ERROR`                           | Map `fieldErrors` to form controls                                        |
+| 429  | `RATE_LIMITED`                               | Respect `Retry-After`; preserve input                                     |
+| 503  | `SERVICE_UNAVAILABLE` / `NOT_CONFIGURED`     | Show connection/setup failure; preserve draft and allow retry             |
+| 500  | `INTERNAL_ERROR`                             | Show generic failure with request ID; no blind mutation retries           |
 
 Network failure, timeout and cancellation have separate client error codes. Retry transient reads with bounded backoff; retry mutations only with the same idempotency event ID. An educationally incorrect laboratory action returns a successful validated outcome (`accepted: false`, feedback), rather than an infrastructure error.
 
-| Area | Endpoints / operations |
-| --- | --- |
-| Identity | `GET /auth/config`; `POST /auth/login`, `/auth/register`, `/auth/logout`, `/auth/recover`; auth confirmation/callback; `GET/PATCH /me`; avatar upload |
-| Enrollment | Create school/workspace; list memberships; create/revoke/accept invitations |
-| Classes | `GET/POST /classes`; manage owned class membership and archive a class |
-| Catalog | `GET /experiments`; `GET /experiments/:id`; versioned public definitions |
-| Assignments | `GET/POST /assignments`; `GET/PATCH /assignments/:id`; publish/archive; explicitly add eligible recipients |
-| Guided attempts | `POST /sessions`; `GET /sessions/:id`; `POST /sessions/:id/actions`; `POST /sessions/:id/answers`; `POST /sessions/:id/submit` |
-| Sandbox saves | List/create sessions; `PATCH /sessions/:id/state` with expected revision and validated state |
-| Notebooks | List/create/update notes for an owned session; authenticated export |
-| Progress | `GET /progress`; `GET /results/:id`; student dashboard summary |
-| Teacher reporting | Assignment recipient completion, selected/best attempt, all attempt history, question/incorrect-answer breakdown and CSV export |
-| Notifications | Paginated list; mark one/all read; account-level unread count |
+| Area              | Endpoints / operations                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity          | `GET /auth/config`; `POST /auth/login`, `/auth/register`, `/auth/logout`, `/auth/recover`; auth confirmation/callback; `GET/PATCH /me`; avatar upload |
+| Enrollment        | Create school/workspace; list memberships; create/revoke/accept invitations                                                                           |
+| Classes           | `GET/POST /classes`; manage owned class membership and archive a class                                                                                |
+| Catalog           | `GET /experiments`; `GET /experiments/:id`; versioned public definitions                                                                              |
+| Assignments       | `GET/POST /assignments`; `GET/PATCH /assignments/:id`; publish/archive; explicitly add eligible recipients                                            |
+| Guided attempts   | `POST /sessions`; `GET /sessions/:id`; `POST /sessions/:id/actions`; `POST /sessions/:id/answers`; `POST /sessions/:id/submit`                        |
+| Sandbox saves     | List/create sessions; `PATCH /sessions/:id/state` with expected revision and validated state                                                          |
+| Notebooks         | List/create/update notes for an owned session; authenticated export                                                                                   |
+| Progress          | `GET /progress`; `GET /results/:id`; student dashboard summary                                                                                        |
+| Teacher reporting | Assignment recipient completion, selected/best attempt, all attempt history, question/incorrect-answer breakdown and CSV export                       |
+| Notifications     | Paginated list; mark one/all read; account-level unread count                                                                                         |
 
 An action/answer request includes an idempotency event ID and expected session revision. Repeated identical requests return the existing outcome. Reusing an ID with a different payload is rejected. A stale revision returns a conflict and the canonical state for recovery.
 
@@ -210,18 +210,18 @@ This is a dedicated implementation workstream, not a final wiring task. API repl
 
 ### Inventory and effort
 
-| Current code / feature | Migration work | Effort | Release dependency |
-| --- | --- | --- | --- |
-| `auth/infrastructure/sessionRepository.ts`, `auth/model.ts`, Auth UI | Replace `getUser/signUp/signInWithPassword/signOut/updateUser` with auth and `/me` API calls; identity gains UUID and memberships. Keep explicit demo profiles separate. | M | Phase 1–2, V1 |
-| `assignments/repository.ts`, builder/list/results UI | Replace table select/insert with typed API; replace generated timestamp IDs and class-name targets with returned IDs, versions, recipient targets; saving a draft and publishing become distinct operations. | L | Phase 5, V2 |
-| `progress/repository.ts`, `createRecord.ts`, result/progress UI | Replace select/upsert with progress/results queries; authenticated completion calls session submit. Local score generation is demo-only. Include attempt/result IDs and pagination. | L | Phase 4, V1; teacher aggregation V2 |
-| `experiments/repository.ts`, `useGuidedExperiment.ts`, `GuidedLab.tsx` | Replace synchronous experiment-key runtime storage with asynchronous session load/actions/answers/submit; canonical revision, in-flight state, queued actions, error recovery and retry/reset policy. | L | Phase 3–4, V1 |
-| `experiments/domain/definitions.ts`, catalog cards/detail/visuals | Fetch public versioned definitions. Separate private keys/scoring from client imports. Allow fixtures only in explicit demo mode. | L | Phase 3, V1 |
-| `application/services.ts`, `useApplicationState.ts`, `App.tsx` | Wire API/demo adapters; replace local-first school data bootstrap and whole-array refresh with scoped async loading; abort obsolete requests on account/route changes. | L | Every V1/V2 slice |
-| `DashboardPage.tsx` | Replace synchronous runtime scanning with session/summary API reads. Loading/error/empty are distinct states. Use memberships/recipients instead of filtering by class name. | M | Basic student flow Phase 4; full summary Phase 6 |
-| `laboratory/application/useSandbox.ts`, `labRepository.ts`, physics/biology save adapters | Keep simulation loops local; add account-bound cloud session snapshots, debounced saves, revision conflicts, dirty/pending indicators and notebooks. | L | Basic snapshots Phase 4; subject-specific saves/notes Phase 6 |
-| `SettingsPage.tsx`, `AppHeader.tsx`, notifications/profile menu | `/me` profile/preferences; avatar API; server notifications/read state replace synthesized assignment/result notifications. | M | Profile Phase 2; avatars/notifications Phase 6 |
-| `shared/infrastructure/supabase.ts`, `cloudSession.ts` | Remove client SDK/table access after dependent slices migrate. A single API transport owns envelopes, aborts and safe errors; demo detection must be explicit, not authorization by email prefix. | M | Transport Phase 1; removal gate before V2 release |
+| Current code / feature                                                                    | Migration work                                                                                                                                                                                               | Effort | Release dependency                                            |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ | ------------------------------------------------------------- |
+| `auth/infrastructure/sessionRepository.ts`, `auth/model.ts`, Auth UI                      | Replace `getUser/signUp/signInWithPassword/signOut/updateUser` with auth and `/me` API calls; identity gains UUID and memberships. Keep explicit demo profiles separate.                                     | M      | Phase 1–2, V1                                                 |
+| `assignments/repository.ts`, builder/list/results UI                                      | Replace table select/insert with typed API; replace generated timestamp IDs and class-name targets with returned IDs, versions, recipient targets; saving a draft and publishing become distinct operations. | L      | Phase 5, V2                                                   |
+| `progress/repository.ts`, `createRecord.ts`, result/progress UI                           | Replace select/upsert with progress/results queries; authenticated completion calls session submit. Local score generation is demo-only. Include attempt/result IDs and pagination.                          | L      | Phase 4, V1; teacher aggregation V2                           |
+| `experiments/repository.ts`, `useGuidedExperiment.ts`, `GuidedLab.tsx`                    | Replace synchronous experiment-key runtime storage with asynchronous session load/actions/answers/submit; canonical revision, in-flight state, queued actions, error recovery and retry/reset policy.        | L      | Phase 3–4, V1                                                 |
+| `experiments/domain/definitions.ts`, catalog cards/detail/visuals                         | Fetch public versioned definitions. Separate private keys/scoring from client imports. Allow fixtures only in explicit demo mode.                                                                            | L      | Phase 3, V1                                                   |
+| `application/services.ts`, `useApplicationState.ts`, `App.tsx`                            | Wire API/demo adapters; replace local-first school data bootstrap and whole-array refresh with scoped async loading; abort obsolete requests on account/route changes.                                       | L      | Every V1/V2 slice                                             |
+| `DashboardPage.tsx`                                                                       | Replace synchronous runtime scanning with session/summary API reads. Loading/error/empty are distinct states. Use memberships/recipients instead of filtering by class name.                                 | M      | Basic student flow Phase 4; full summary Phase 6              |
+| `laboratory/application/useSandbox.ts`, `labRepository.ts`, physics/biology save adapters | Keep simulation loops local; add account-bound cloud session snapshots, debounced saves, revision conflicts, dirty/pending indicators and notebooks.                                                         | L      | Basic snapshots Phase 4; subject-specific saves/notes Phase 6 |
+| `SettingsPage.tsx`, `AppHeader.tsx`, notifications/profile menu                           | `/me` profile/preferences; avatar API; server notifications/read state replace synthesized assignment/result notifications.                                                                                  | M      | Profile Phase 2; avatars/notifications Phase 6                |
+| `shared/infrastructure/supabase.ts`, `cloudSession.ts`                                    | Remove client SDK/table access after dependent slices migrate. A single API transport owns envelopes, aborts and safe errors; demo detection must be explicit, not authorization by email prefix.            | M      | Transport Phase 1; removal gate before V2 release             |
 
 M/L are relative scope, not deadlines. The largest frontend tasks are guided sessions, shared application state, assignment builder/reporting and sandbox synchronization. Their effort is included in the timeline below.
 
@@ -251,16 +251,18 @@ Old URLs remain valid through explicit ID-to-view adapters. After a successful m
 
 Planning estimate: 19–27 focused engineering days, sequential work by one engineer, including the frontend migrations and meaningful testing. This is an effort forecast, not a calendar guarantee. Phase 0 may revise it after live database and legacy-data inventory. External auth/project access and review waits are excluded. Each phase includes its matching frontend vertical slice rather than postponing all frontend work to Phase 6.
 
-| Phase | Release | Effort | Work | Completion evidence |
-| --- | --- | --- | --- | --- |
-| 0. Review and remote inventory | V1 | 1 day | Read live schema/policies/project config; inventory client access, legacy records and migration assumptions; finalize contracts | Confirmed inventory before SQL is applied |
-| 1. Backend foundation | V1 | 2–3 days | Path aliases, HTTP adapters, shared errors/API client, cookie auth, server-only guards and auth frontend migration | Verified auth request; forged/local/demo identity rejected; contract tests pass |
-| 2. Identity and classroom schema | V1 | 2–3 days | Profiles, schools, memberships, classes, invitations, constraints/RLS, profile/enrollment integration | Cross-school isolation, role escalation and enrollment tests pass |
-| 3. Catalog and versioning | V1 | 2–3 days | Seed nine experiments, versioned public DTOs/private keys, catalog frontend and shared pure logic | All subjects load through API; keys absent from client bundle; version pinning works |
-| 4. Sessions and assessment | V1 | 4–5 days | Guided-session frontend migration, grading/submission, history/continue flow, basic sandbox snapshots | Three flagship flows and remaining guided activities persist; duplicate/stale requests handled; real-user E2E passes |
-| 5. Teacher activities | V2 | 3–4 days | Assignment builder/list/results migration, drafts/publication, targets/recipients, teacher reports | Actual API-backed teacher → student → results flow passes |
-| 6. App integration | V2 | 3–5 days | Full dashboard aggregation, subject save adapters, notes, settings/avatar and persistent notifications | Two-device workflows pass; account switching is isolated; all direct client Supabase access removed |
-| 7. Migration and release | V2 | 2–3 days | Legacy-data conversion, reviewed migrations, production configuration, advisors, recovery and operations | Reproducible schema; authorization/flow checks and production build pass; recovery documented |
+Status snapshot: **2026-10-04**. **✅** means the phase implementation and its recorded local checks are complete; **☐** means work or verification remains. These checks do not mark V1/V2 as deployed or production-ready. See [the detailed checklist](#11-implementation-progress-checklist-2026-10-04) for completed items within unfinished phases.
+
+| Done | Phase                            | Release | Effort   | Work                                                                                    | Progress / remaining work                                                                                                                |
+| ---- | -------------------------------- | ------- | -------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| ☐    | 0. Review and remote inventory   | V1      | 1 day    | Repository/live schema inventory and contracts                                          | Repository inventory and contracts complete; remote schema, policies, users and legacy-data inventory pending                            |
+| ✅   | 1. Backend foundation            | V1      | 2–3 days | Path aliases, HTTP adapters, errors/API client, cookie auth and frontend auth migration | Implemented; local auth and contract checks passed                                                                                       |
+| ✅   | 2. Identity and classroom schema | V1      | 2–3 days | Profiles, memberships, classes, invitations, constraints/RLS and enrollment             | Implemented; local cross-user/school isolation and role-escalation checks passed                                                         |
+| ✅   | 3. Catalog and versioning        | V1      | 2–3 days | Nine versioned experiments, private keys, catalog API/frontend and pure logic           | Implemented; local catalog, private-key isolation and version-pinning checks passed                                                      |
+| ✅   | 4. Sessions and assessment       | V1      | 4–5 days | Guided frontend, canonical actions/answers, grading, history and basic snapshots        | Nine assessed flows passed locally; guided resume/server results verified in independent browser contexts                                |
+| ☐    | 5. Teacher activities            | V2      | 3–4 days | Drafts, custom questions, class publication, recipients, reports and frontend migration | Class workflow implemented and browser-tested; individual recipient targeting and extended authoring/export browser verification pending |
+| ☐    | 6. App integration               | V2      | 3–5 days | Dashboard summaries, subject saves, notes, avatar, notifications and client migration   | Modules/API adapters implemented; final extended cross-device notebook/export verification pending                                       |
+| ☐    | 7. Migration and release         | V2      | 2–3 days | Migrations, legacy conversion, production setup, advisors and recovery                  | Local migrations/checks passed; remote inventory, configuration, deployment and staging verification pending                             |
 
 V1 forecast: 11–15 days. V2 forecast: 8–12 additional days. V1 has its own production gate: tested migrations, RLS checks, real auth/catalog/session/results integration, no private keys in the client, and a passing production build. Phase 7 adds the full V2/legacy migration release gate; it does not defer V1 security/testing until V2.
 
@@ -277,13 +279,66 @@ Use Supabase local development for migrations/tests where available. Inspect dat
 
 This release keeps classroom functionality limited to experiment distribution and assessments. Live collaboration, video lessons, billing, proctoring, AI grading and a full school administration system are outside the current scope.
 
-## 11. Implementation status (2026-10-04)
+## 11. Implementation progress checklist (2026-10-04)
 
-- Revised plan and error contract committed before implementation (`5f5c1d1`).
-- Phase 0 repository inventory complete; remote inventory is pending. MCP currently reports Not logged in and no Supabase tools are exposed in this session. The configured project is cidyenmlvuqciymnqzii. Only the URL/publishable key/local APP_URL are currently present; server credentials and remote management access remain required.
-- Phase 1 foundation is integrated with verified cookie auth, recovery endpoints, path aliases, typed errors, streamed body limits, origin checks and persistent rate limits.
-- Phase 2–4 local implementation is functional: scoped memberships/classes/invitations, nine versioned public definitions/private keys, canonical session actions/answers, idempotent events, optimistic revisions and immutable grading/submission. All nine assessed flows passed against real local Supabase. Direct Data API isolation and editable-metadata role escalation are tested.
-- Phase 5 teacher drafts, customized instructions/questions/options/answer choices and explanations, atomic publication, frozen class recipients, reports and frontend API migration are functional locally. Paginated reports compute exact completion totals across the full dataset; CSV export collects every page. Individual recipient targeting remains pending. The real browser flow covers teacher creation/publication through student submission and teacher report.
-- Phase 6 migrated notifications, settings/enrollment/avatar, chemistry bench and all five physics/microscope save adapters. Guided resume and server results passed in two independent browser contexts. Unsynced drafts survive account-version reload; explicit recovery follows revision conflicts. Notebooks use the owned note API; history paginates and progress summaries aggregate the complete dataset.
-- Phase 7 five reproducible migrations have passed local installation; local advisors report no issues. Type checking, architecture/domain/API/UI suites and production build passed; production dependency audit reports zero vulnerabilities. Demo shell/header/mobile/flow checks passed. These are local gates, not a production certification.
-- Release still requires remote schema/PostgreSQL-version inventory, legacy-data conversion determined by that inventory, reviewed remote migration deployment, server secret configuration, SMTP/confirmation/domain configuration and live staging verification. No remote reset, migration or public application deployment has been performed.
+**Legenda:** ✅ = selesai dengan bukti implementasi/verifikasi lokal yang tercatat; ☐ = belum selesai atau belum selesai diverifikasi. Fitur yang kodenya tersedia tetapi masih menunggu pemeriksaan lanjutan dipisahkan dari item verifikasinya. Centang lokal tidak berarti telah diterapkan di produksi.
+
+### V1 — Phase 0–4
+
+| Selesai | Phase      | Pekerjaan                                                             | Bukti / pekerjaan tersisa                                                                                    |
+| ------- | ---------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| ✅      | 0          | Inventaris repository, arsitektur, migrasi frontend dan kontrak error | Plan/contract dicommit sebelum implementasi: `5f5c1d1`                                                       |
+| ☐       | 0          | Inventaris Supabase remote                                            | Periksa tabel, policies, Auth users, riwayat migrasi dan versi PostgreSQL; belum dilakukan                   |
+| ☐       | 0          | Tentukan kompatibilitas dan konversi data lama                        | Bergantung pada inventaris remote; jangan reset atau menimpa data yang belum diperiksa                       |
+| ✅      | 1          | Fondasi API dan transport frontend                                    | Path aliases, DTO/error contract, HTTP adapters dan `apiFetch` tersedia                                      |
+| ✅      | 1          | Auth cookie, recovery dan migrasi UI akun                             | Identitas server diuji lokal; demo terpisah dari akun nyata                                                  |
+| ✅      | 1          | Proteksi API                                                          | Server-only guards, body limits, origin checks dan persistent rate limits tersedia; pemeriksaan lokal passed |
+| ✅      | 2          | Profil, sekolah, keanggotaan, kelas dan undangan                      | Schema/modul/API serta alur enrollment tersedia                                                              |
+| ✅      | 2          | Otorisasi dan isolasi akses                                           | RLS, cross-user/school isolation dan penolakan eskalasi lewat editable Auth metadata diuji lokal             |
+| ✅      | 3          | Katalog sembilan eksperimen dan versi                                 | Seed/migrasi dan API katalog tersedia untuk ketiga subjek                                                    |
+| ✅      | 3          | Pemisahan kunci jawaban dan version pinning                           | Private answer keys serta isolasi Data API diuji lokal                                                       |
+| ✅      | 4          | Sesi terpandu dan migrasi frontend                                    | Canonical actions/answers, UUID retries dan optimistic revisions tersedia                                    |
+| ✅      | 4          | Penilaian server dan hasil final                                      | Sembilan assessed flows, duplicate/stale events dan score tampering diuji pada Supabase lokal                |
+| ✅      | 4          | Resume, progres dan snapshot dasar                                    | Guided resume dan persisted server scores diperiksa dalam dua browser context independen                     |
+| ☐       | V1 release | Rilis V1 pada lingkungan nyata                                        | Masih memerlukan konfigurasi remote, deployment dan staging checks; lihat release checklist                  |
+
+### V2 — Phase 5–6
+
+| Selesai | Phase | Pekerjaan                                             | Bukti / pekerjaan tersisa                                                                                   |
+| ------- | ----- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ✅      | 5     | Draft dan konfigurasi tugas guru                      | Instruksi, hints, pertanyaan, opsi, jawaban benar dan penjelasan tersedia melalui API/UI                    |
+| ✅      | 5     | Publikasi ke kelas dan penerima tetap                 | Atomic publication, versi tugas dan frozen class recipients tersedia                                        |
+| ✅      | 5     | Laporan guru dan ringkasan paginated                  | Total penyelesaian dihitung terhadap dataset lengkap; UI/API tersedia                                       |
+| ✅      | 5     | Alur browser guru → siswa → laporan                   | Pembuatan/publikasi tugas, submission siswa dan laporan guru diuji lokal                                    |
+| ✅      | 5     | Implementasi ekspor CSV                               | Mengambil seluruh halaman laporan dan melakukan escaping formula pada teks                                  |
+| ☐       | 5     | Verifikasi browser lanjutan authoring dan ekspor      | Final rerun perubahan pertanyaan/penjelasan serta CSV belum selesai                                         |
+| ☐       | 5     | Penargetan penerima individual                        | Belum tersedia; penugasan saat ini berdasarkan kelas                                                        |
+| ✅      | 6     | Migrasi frontend akun ke API                          | API/demo adapters tersedia; direct browser Supabase access telah dihapus dan architecture checks diterapkan |
+| ✅      | 6     | Dashboard, riwayat dan summary progres                | History paginated dan summary menghitung keseluruhan dataset                                                |
+| ✅      | 6     | Penyimpanan per subjek                                | Chemistry bench, kelima simulasi Fisika dan mikroskop memakai account save adapters                         |
+| ✅      | 6     | Penanganan draft dan konflik revisi                   | Draft perangkat dipertahankan; recovery eksplisit setelah memuat versi akun tersedia                        |
+| ✅      | 6     | Implementasi notebook                                 | Owned note API, UUID idempotent, restore dan export text tersedia                                           |
+| ☐       | 6     | Verifikasi browser lanjutan notebook lintas perangkat | Final rerun belum selesai; implementasi/API coverage tidak menggantikan gate browser ini                    |
+| ✅      | 6     | Settings, avatar dan notifikasi                       | Migrasi API, private avatar upload dan persistent read state tersedia; integrasi lokal diperiksa            |
+
+### Phase 7 — Migration dan release
+
+| Selesai | Pekerjaan                              | Bukti / pekerjaan tersisa                                                                                                |
+| ------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| ✅      | Lima migrasi database reproducible     | Instalasi/reset database lokal telah passed                                                                              |
+| ✅      | Database advisors lokal                | Tidak ada issue pada pemeriksaan lokal terakhir                                                                          |
+| ✅      | Architecture/type/domain/API/UI checks | Pemeriksaan lokal dan build produksi telah passed                                                                        |
+| ✅      | Dependency audit dan CI dasar          | Audit dependency produksi terakhir tanpa vulnerability; workflow build/check/test tersedia                               |
+| ✅      | Demo browser checks                    | Shell, header, mobile dan demo flow telah diperiksa                                                                      |
+| ✅      | Dokumentasi setup dan recovery         | Setup, backup/rollback dan batas verifikasi dijelaskan di `backend/README.md`                                            |
+| ☐       | Akses pengelolaan Supabase remote      | Pada verifikasi terakhir MCP belum terautentikasi/tool belum tersedia; akses perlu diperiksa kembali                     |
+| ☐       | Konfigurasi secret server              | Pada verifikasi terakhir baru URL, publishable key dan APP_URL lokal tersedia; konfigurasi server produksi belum lengkap |
+| ☐       | Backup dan penanganan data lama        | Inventaris/export/konversi bila diperlukan harus ditentukan sebelum migrasi remote                                       |
+| ☐       | Deployment migrasi remote              | Belum dilakukan; review terhadap database aktual diperlukan                                                              |
+| ☐       | Konfigurasi Auth, SMTP dan callback    | Email confirmation/recovery serta site/callback URLs produksi belum diverifikasi                                         |
+| ☐       | Domain HTTPS dan deployment aplikasi   | APP_URL produksi dan hosting publik belum disiapkan                                                                      |
+| ☐       | Advisors dan verifikasi staging remote | Auth, isolasi akses, student/teacher flows serta persistence perlu diuji pada lingkungan target                          |
+| ☐       | Operasional produksi dan pemulihan     | Backup terverifikasi, logging/monitoring dan prosedur recovery lingkungan target perlu diperiksa                         |
+| ☐       | Rilis V2 / production submission       | Baru dicentang setelah seluruh release gates yang berlaku selesai                                                        |
+
+Project Supabase yang dikonfigurasi adalah `cidyenmlvuqciymnqzii`. Tidak ada remote reset, migrasi remote, atau deployment aplikasi publik yang tercatat. Estimasi pada section 9 adalah forecast awal, bukan jumlah hari pekerjaan tersisa. Perbarui tabel ini ketika ada bukti implementasi atau verifikasi baru.
