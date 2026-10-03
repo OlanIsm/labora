@@ -234,6 +234,7 @@ Radius mengikuti fungsi: badge kecil, input ringkas, navigasi dan alat menengah,
 ### Cards / Chips
 - Pilihan lab adalah satu tautan utuh dengan nama subjek, pertanyaan nyata, dan jumlah eksperimen dari data.
 - Kartu eksperimen putih bergaris menampilkan pratinjau simulasi yang diberi label, subjek, durasi, judul, uraian, dan tindakan. Padding isi 24px; hover mengangkat 3px dan menguatkan batas.
+- Eksperimen selesai ditandai centang besar hijau terang `#00ac3d` di pojok kanan atas pratinjau, pada lingkaran putih 52px dengan label aksesibel "Eksperimen selesai". Aksi "Lihat eksperimen" tetap terpisah dari status. Tujuan lab pada sidebar dan tab ponsel memakai label singkat "Eksperimen".
 - Badge subjek berlabel dan berikon memakai pasangan latar/tinta subjek; bukan status dekoratif.
 - State kosong memakai garis putus-putus, penjelasan, dan tindakan relevan bila tersedia.
 

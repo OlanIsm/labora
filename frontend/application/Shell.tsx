@@ -53,7 +53,7 @@ export function Shell({
   const marketing = ["/", "/login", "/register"].includes(pathname);
   const nav = [
     { href: "/dashboard", label: "Beranda", icon: Home },
-    { href: "/laboratories", label: "Eksperimen bebas", icon: FlaskConical },
+    { href: "/laboratories", label: "Eksperimen", icon: FlaskConical },
     { href: "/challenges", label: "Tantangan", icon: Beaker },
     { href: "/assignments", label: "Tugas", icon: BookOpen },
     { href: "/progress", label: "Progres", icon: Target },

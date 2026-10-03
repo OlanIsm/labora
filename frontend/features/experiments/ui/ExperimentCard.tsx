@@ -21,6 +21,16 @@ export function ExperimentCard({
       <div className={`experiment-art ${exp.subject}`}>
         <Visual exp={exp} state={initialRuntime()} preview />
         <span className="preview-label">Pratinjau simulasi</span>
+        {record && (
+          <span
+            className="experiment-completed"
+            role="img"
+            aria-label="Eksperimen selesai"
+            title="Eksperimen selesai"
+          >
+            <CheckCircle2 size={44} strokeWidth={2.8} aria-hidden="true" />
+          </span>
+        )}
       </div>
       <div className="experiment-card-copy">
         <div className="experiment-card-meta">
@@ -33,15 +43,7 @@ export function ExperimentCard({
         <h3>{exp.title}</h3>
         <p>{exp.subtitle}</p>
         <span className="card-link">
-          {record ? (
-            <>
-              <CheckCircle2 size={17} /> Selesai · Coba lagi
-            </>
-          ) : (
-            <>
-              Lihat eksperimen <ArrowRight size={17} />
-            </>
-          )}
+          Lihat eksperimen <ArrowRight size={17} />
         </span>
       </div>
     </Link>

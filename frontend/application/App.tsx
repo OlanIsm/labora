@@ -119,7 +119,14 @@ export default function App() {
   else if (pathname === "/laboratories" || pathname === "/experiments")
     content = (
       <LaboratorySelection
-        recommendation={<ExperimentCard exp={experiments[0]} />}
+        recommendation={
+          <ExperimentCard
+            exp={experiments[0]}
+            record={records.find(
+              (record) => record.experimentId === experiments[0].id,
+            )}
+          />
+        }
       />
     );
   else if (segments[0] === "experiments" && exp)
