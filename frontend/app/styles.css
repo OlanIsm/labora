@@ -315,7 +315,8 @@ small {
   gap: 7px;
 }
 .hero-experiment {
-  background: var(--blue-light);
+  background: color-mix(in srgb, var(--blue) 35%, white)
+    url("/abstract-lab.svg") center / cover;
   border-radius: 32px;
   padding: 24px 28px 28px;
   text-align: center;
