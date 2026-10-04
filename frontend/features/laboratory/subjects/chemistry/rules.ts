@@ -1,0 +1,370 @@
+import type { Rule } from "../../domain/types";
+
+const reaction = (
+  id: string,
+  trigger: string[],
+  stoichiometry: number[],
+  products: [string, number][],
+  observation: string,
+  extra: Partial<Rule> = {},
+): Rule => ({
+  id,
+  label: observation,
+  discipline: "chemistry",
+  trigger,
+  stoichiometry,
+  products,
+  model: "reaction",
+  rate: 0.002,
+  event: "reaction.started",
+  observation,
+  ...extra,
+});
+const neutralization = [
+  ...["hcl01", "hcl1"].flatMap((a) =>
+    ["naoh01", "naoh1"].map((b) =>
+      reaction(
+        `neutral-${a}-${b}`,
+        [a, b],
+        [1, 1],
+        [["nacl", 1]],
+        "Suhu larutan meningkat.",
+        { heat: 57000, rate: 1 },
+      ),
+    ),
+  ),
+  ...["naoh01", "naoh1"].map((b) =>
+    reaction(
+      `neutral-sulfate-${b}`,
+      ["h2so4", b],
+      [1, 2],
+      [["na2so4", 1]],
+      "Suhu larutan meningkat.",
+      { heat: 114000, rate: 1 },
+    ),
+  ),
+  ...["naoh01", "naoh1"].map((b) =>
+    reaction(
+      `neutral-acetate-${b}`,
+      ["acetic", b],
+      [1, 1],
+      [["acetate", 1]],
+      "Suhu larutan meningkat.",
+      { heat: 55000, rate: 1 },
+    ),
+  ),
+  ...["hcl01", "hcl1"].map((a) =>
+    reaction(
+      `neutral-ammonium-${a}`,
+      [a, "ammonia"],
+      [1, 1],
+      [["ammonium", 1]],
+      "Suhu larutan meningkat.",
+      { heat: 51000, rate: 1 },
+    ),
+  ),
+];
+const gases = ["hcl01", "hcl1", "acetic", "h2so4"].flatMap((acid) =>
+  ["caco3", "caco3-powder", "na2co3", "nahco3"].map((carbonate) =>
+    reaction(
+      `carbonate-${acid}-${carbonate}`,
+      [acid, carbonate],
+      [acid === "h2so4" ? 1 : carbonate === "nahco3" ? 1 : 2, 1],
+      [],
+      "Gelembung gas terbentuk.",
+      {
+        gas: "co2",
+        gasRatio: 1,
+        heat: acid === "acetic" && carbonate === "nahco3" ? -5000 : 0,
+        rate: carbonate.endsWith("powder") ? 0.004 : 0.001,
+        event: "gas.formed",
+      },
+    ),
+  ),
+);
+const metals = ["hcl01", "hcl1", "h2so4"].flatMap((acid) =>
+  ["mg", "zn", "zn-powder", "fe", "al"].map((metal) =>
+    reaction(
+      `metal-${acid}-${metal}`,
+      [acid, metal],
+      [
+        metal === "al"
+          ? acid === "h2so4"
+            ? 1.5
+            : 3
+          : acid === "h2so4"
+            ? 1
+            : 2,
+        1,
+      ],
+      [],
+      "Gelembung terbentuk pada permukaan logam.",
+      {
+        gas: "h2",
+        gasRatio: metal === "al" ? 1.5 : 1,
+        rate:
+          metal === "mg"
+            ? 0.003
+            : metal === "fe"
+              ? 0.0002
+              : metal === "al"
+                ? 0.0001
+                : 0.001,
+        heat: 15000,
+        event: "gas.formed",
+      },
+    ),
+  ),
+);
+const precipitates: [string, string, number, number, string, string, string][] =
+  [
+    ["agno3", "nacl", 1, 1, "agcl", "#eef0ee", "putih"],
+    ["agno3", "kcl", 1, 1, "agcl", "#eef0ee", "putih"],
+    ["bacl2", "h2so4", 1, 1, "baso4", "#eef0ee", "putih"],
+    ["bacl2", "na2so4", 1, 1, "baso4", "#eef0ee", "putih"],
+    ["pbno3", "ki", 1, 2, "pbi2", "#eac83b", "kuning"],
+    ["cuso4", "naoh01", 1, 2, "cuoh2", "#549abd", "biru"],
+    ["cuso4", "naoh1", 1, 2, "cuoh2", "#549abd", "biru"],
+    ["fecl3", "naoh01", 1, 3, "feoh3", "#a5563a", "cokelat kemerahan"],
+    ["fecl3", "naoh1", 1, 3, "feoh3", "#a5563a", "cokelat kemerahan"],
+    ["cuso4", "na2co3", 1, 1, "cuoh2", "#67a99b", "biru kehijauan"],
+    ["cacl2", "na2co3", 1, 1, "caco3", "#eef0ee", "putih"],
+    ["agno3", "ki", 1, 1, "agi", "#ece19b", "kuning pucat"],
+    ["pbno3", "nacl", 1, 2, "pbcl2", "#eef0ee", "putih"],
+  ];
+const indicators = [
+  ["universal", "universal"],
+  ["pp", "pp"],
+  ["mo", "mo"],
+  ["btb", "btb"],
+  ["litmus-red", "litmus"],
+  ["litmus-blue", "litmus"],
+  ["cabbage-indicator", "cabbage"],
+].map(([id, model]): Rule => ({
+  id: `indicator-${id}`,
+  label: `Indikator ${id}`,
+  discipline: "chemistry",
+  trigger: [id],
+  model: `indicator:${model}`,
+  event: "indicator.changed",
+  observation: "Warna indikator berubah.",
+}));
+export const chemistryRules: Rule[] = [
+  ...neutralization,
+  ...gases,
+  ...metals,
+  ...precipitates.map(([a, b, sa, sb, product, color, name]) =>
+    reaction(
+      `precipitate-${a}-${b}`,
+      [a, b],
+      [sa, sb],
+      [[product, 1]],
+      `Terbentuk endapan ${name}.`,
+      { color, precipitate: product, event: "precipitate.formed", rate: 1 },
+    ),
+  ),
+  ...indicators,
+  reaction(
+    "complex-iron",
+    ["fecl3", "kscn"],
+    [1, 3],
+    [],
+    "Larutan berwarna merah darah.",
+    { model: "complex", color: "#a42d41" },
+  ),
+  reaction(
+    "copper-ammonia-low",
+    ["cuso4", "ammonia"],
+    [1, 2],
+    [["cuoh2", 1]],
+    "Endapan biru terbentuk.",
+    { model: "copper-complex", color: "#518fba", precipitate: "cuoh2" },
+  ),
+  reaction(
+    "copper-ammonia-excess",
+    ["cuso4", "ammonia"],
+    [1, 4],
+    [],
+    "Larutan berwarna biru tua.",
+    { model: "copper-excess", color: "#284a99" },
+  ),
+  ...["zn", "fe", "mg"].map((m) =>
+    reaction(
+      `displacement-${m}`,
+      [m, "cuso4"],
+      [1, 1],
+      [["cu", 1]],
+      "Lapisan tembaga cokelat terbentuk; warna biru memudar.",
+      { precipitate: "cu", color: "#a86a39", rate: 0.0005 },
+    ),
+  ),
+  reaction(
+    "silver-crystals",
+    ["cu", "agno3"],
+    [1, 2],
+    [["ag", 2]],
+    "Kristal perak terbentuk; larutan membiru.",
+    { precipitate: "ag", color: "#61a5c5", rate: 0.0005 },
+  ),
+  reaction(
+    "peroxide-manganese",
+    ["h2o2", "mno2"],
+    [2, 0],
+    [],
+    "Gelembung oksigen terbentuk.",
+    { gas: "o2", gasRatio: 1, rate: 0.003, event: "gas.formed" },
+  ),
+  reaction("peroxide-yeast", ["h2o2", "yeast"], [2, 0], [], "Busa terbentuk.", {
+    gas: "o2",
+    gasRatio: 1,
+    rate: 0.002,
+    event: "gas.formed",
+  }),
+  reaction(
+    "peroxide-alone",
+    ["h2o2"],
+    [2],
+    [],
+    "Sedikit gelembung terbentuk sangat perlahan.",
+    { gas: "o2", gasRatio: 1, rate: 0.000002, event: "gas.formed" },
+  ),
+  reaction(
+    "starch-test",
+    ["iodine", "starch"],
+    [0, 0],
+    [],
+    "Warna biru-hitam terlihat.",
+    { model: "test", color: "#2d3455" },
+  ),
+  reaction(
+    "glucose-test",
+    ["benedict", "glucose"],
+    [0, 0],
+    [],
+    "Warna jingga / merah bata terlihat.",
+    { model: "test", color: "#ad572d", minTemperature: 70 },
+  ),
+  reaction(
+    "protein-test",
+    ["biuret", "protein"],
+    [0, 0],
+    [],
+    "Warna ungu terlihat.",
+    { model: "test", color: "#765394" },
+  ),
+  ...[
+    ["nacl", "#e8ba32"],
+    ["kcl", "#aa7ac8"],
+    ["licl", "#bb324f"],
+    ["cacl2", "#c96c38"],
+    ["cuso4", "#439c92"],
+  ].map(([m, color]): Rule => ({
+    id: `flame-${m}`,
+    label: "Uji nyala",
+    discipline: "chemistry",
+    trigger: [m, "burner"],
+    model: "flame",
+    color,
+    event: "flame.changed",
+    observation: "Nyala berubah warna.",
+  })),
+  {
+    id: "burn-magnesium",
+    label: "Pembakaran Mg",
+    discipline: "chemistry",
+    trigger: ["mg", "burner"],
+    model: "combustion",
+    products: [["mgo", 1]],
+    event: "flame.changed",
+    observation: "Nyala putih dan serbuk putih terbentuk.",
+  },
+  {
+    id: "oil-water",
+    label: "Pemisahan lapisan",
+    discipline: "chemistry",
+    trigger: ["oil", "water"],
+    model: "layers",
+    event: "mixture.layered",
+    observation: "Dua lapisan cairan terlihat; minyak di atas.",
+  },
+  {
+    id: "emulsion",
+    label: "Emulsi",
+    discipline: "chemistry",
+    trigger: ["oil", "water", "soap"],
+    model: "emulsion",
+    event: "mixture.emulsified",
+    observation: "Campuran menjadi keruh setelah diaduk.",
+  },
+  {
+    id: "ethanol-water",
+    label: "Campuran etanol-air",
+    discipline: "chemistry",
+    trigger: ["ethanol", "water"],
+    model: "miscible",
+    event: "mixture.mixed",
+    observation: "Satu fase cairan terlihat.",
+  },
+  ...["nacl", "sucrose", "kno3", "cuso4"].map((m): Rule => ({
+    id: `dissolve-${m}`,
+    label: "Kelarutan",
+    discipline: "chemistry" as const,
+    trigger: [m, "water"],
+    model: "solubility",
+    event: "solid.dissolved",
+    observation:
+      "Sebagian padatan larut; sisa padatan bergantung suhu dan jumlah.",
+  })),
+  ...[
+    "filter",
+    "decant",
+    "evaporate",
+    "distill",
+    "magnet",
+    "chromatography",
+  ].map((model): Rule => ({
+    id: `separate-${model}`,
+    label: "Pemisahan",
+    discipline: "chemistry" as const,
+    trigger: [],
+    model: `separation:${model}`,
+    event: "mixture.separated",
+    observation: "Komponen campuran terpisah.",
+  })),
+  ...["strong", "weak", "none"].map((model): Rule => ({
+    id: `conductivity-${model}`,
+    label: "Daya hantar",
+    discipline: "chemistry" as const,
+    trigger: ["electrolyte-tester"],
+    model: `conductivity:${model}`,
+    event: "instrument.read",
+    observation: "Pembacaan daya hantar tersedia.",
+  })),
+  {
+    id: "electrolysis-water",
+    label: "Elektrolisis air",
+    discipline: "chemistry",
+    trigger: ["electrolysis", "water"],
+    model: "electrolysis",
+    event: "gas.formed",
+    observation: "Gas di katoda dan anoda memiliki perbandingan volume 2:1.",
+  },
+  {
+    id: "electrolysis-copper",
+    label: "Elektrolisis CuSO₄",
+    discipline: "chemistry",
+    trigger: ["electrolysis", "cuso4"],
+    model: "electrolysis-copper",
+    event: "metal.deposited",
+    observation: "Massa katoda bertambah.",
+  },
+  {
+    id: "fruit-battery",
+    label: "Baterai buah",
+    discipline: "chemistry",
+    trigger: ["zn", "cu", "acetic"],
+    model: "fruit-battery",
+    event: "instrument.read",
+    observation: "Tegangan sel terbaca sekitar 0,9 V.",
+  },
+];

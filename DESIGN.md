@@ -133,7 +133,7 @@ Tindakan mengikuti benda dan isinya. Bahan tidak mempunyai tombol menyalakan ala
 
 Labora mempertahankan identitas yang dipilih pengguna dalam [designSystem.md](designSystem.md): warna cerah, judul Fredoka, dan teks Nunito Sans. Antarmuka berbahasa Indonesia mengajak siswa SMA/MA kelas X–XII mencoba tindakan konkret, melihat perubahan, lalu memahami hasilnya. Bentuk membulat mengelompokkan tindakan, bukan mengubah laboratorium menjadi permainan anak kecil. Meja sandbox tidak mewajibkan langkah atau kuis; aktivitas terpandu lama tersedia sebagai Tantangan opsional.
 
-Tema sengaja terang untuk ruang kelas dan penggunaan ponsel di siang hari. Teks gelap menjaga keterbacaan di atas warna merek yang terang. Dokumentasi ini merekam implementasi di `frontend/app/styles.css` dan `frontend/components/App.tsx`; komposisi khusus redesign tetap berada di `.impeccable/surface-redesign.md`. Ilustrasi eksperimen dibangun dengan CSS, SVG inline, dan ikon Lucide yang relevan, tanpa raster baru.
+Tema sengaja terang untuk ruang kelas dan penggunaan ponsel di siang hari. Teks gelap menjaga keterbacaan di atas warna merek yang terang. Implementasi tersusun di `frontend/app/styles.css`, `frontend/application/`, dan modul `frontend/features/`; komposisi khusus redesign tetap berada di `.impeccable/surface-redesign.md`. Visual eksperimen memakai CSS, SVG inline, dan ikon Lucide; logo serta mascot memakai aset yang disediakan pengguna.
 
 **Key Characteristics:**
 - Warna merek cerah dengan teks gelap yang terbaca.
@@ -191,7 +191,9 @@ Playful motion is brief and action-triggered: tool arrival/pour, settling beaker
 
 Halaman publik memiliki wadah maksimum 1280px dengan padding samping 32px. Hero memasangkan teks dan percobaan indikator dalam dua kolom. Pilihan lab memakai tiga kolom yang setara karena ketiganya adalah tujuan navigasi sejajar, bukan kartu promosi tambahan.
 
-Aplikasi desktop memakai sidebar tetap, bukan sidebar expandable: lebar 240px, turun menjadi 210px pada breakpoint 1150px. Halaman isi maksimum 1250px; mode laboratorium lebar maksimum 1500px. Sidebar berisi Beranda, Jelajahi lab, Tugas, dan Progres; akun guru menambahkan Ruang guru. Tidak ada tujuan profil terpisah.
+Sidebar desktop mulai dalam bentuk ikon selebar 88px. Hover atau fokus keyboard membukanya dengan transisi 280ms; klik menu mempertahankannya terbuka melintasi pergantian halaman. Klik area utama menciutkannya kembali. Lebar terbuka 240px, atau 210px di bawah 1150px. Sidebar terbuka menimpa halaman pada lapisan lebih tinggi dengan bayangan; area utama tetap memakai margin 88px tanpa bergeser. Settings menyediakan pengaturan profil dan logout; kotak pesan motivasi di sidebar dihapus.
+
+Logo navigasi dan favicon memakai aset `public/logo/logo.png`. Kartu kategori eksperimen bebas memakai mascot transparan: singa untuk Kimia, gajah untuk Fisika, dan kucing untuk Biologi. Label dan warna kategori tetap dipertahankan.
 
 Pada lebar sampai 900px, sidebar diganti tab bawah berikon dan label. Siswa memiliki empat tujuan; guru memiliki lima karena Ruang guru tetap tersedia. Padding bawah isi memasukkan 108px dan safe area agar tab tidak menutupi isi. Pada lebar sampai 650px, hero, kartu lab, daftar eksperimen, detail, hasil, dan formulir guru berubah menjadi satu kolom; padding halaman aplikasi menjadi 16px di sisi.
 
@@ -203,9 +205,9 @@ Ritme ruang memakai langkah berulang 8, 12, 16, 20, 24, 32, 40, dan 64px; jarak 
 
 ## Elevation & Depth
 
-Permukaan dasar datar: garis tipis dan latar subjek memberi pengelompokan, bukan bayangan kartu. Satu bayangan struktural, `0 -8px 32px #1f243030`, menandai drawer inventori di atas isi; backdrop dialog memakai `#1f243080`.
+Kartu pilihan lab dan rekomendasi memakai warna subjek yang tegas: biru #5ec8ff, kuning #ffd84d, dan hijau #7ed957. Teks ditebalkan dengan tinta gelap sesuai subjek. Bayangan lembut `0 8px 20px` atau `0 10px 24px` memberi kedalaman. Rekomendasi mengikuti subjek eksperimennya. Drawer inventori memakai bayangan `0 -8px 32px #1f243030`.
 
-**The Flat-at-Rest Rule.** Kartu dan tombol tidak membutuhkan bayangan saat diam; bayangan drawer menandai lapisan modal yang benar-benar berada di depan.
+Formulir dan Settings tetap tenang dengan garis tipis; warna kuat serta bayangan dipusatkan pada kartu lab dan rekomendasi.
 
 ## Shapes
 
@@ -232,6 +234,7 @@ Radius mengikuti fungsi: badge kecil, input ringkas, navigasi dan alat menengah,
 ### Cards / Chips
 - Pilihan lab adalah satu tautan utuh dengan nama subjek, pertanyaan nyata, dan jumlah eksperimen dari data.
 - Kartu eksperimen putih bergaris menampilkan pratinjau simulasi yang diberi label, subjek, durasi, judul, uraian, dan tindakan. Padding isi 24px; hover mengangkat 3px dan menguatkan batas.
+- Eksperimen selesai ditandai centang besar hijau terang `#00ac3d` di pojok kanan atas pratinjau, pada lingkaran putih 52px dengan label aksesibel "Eksperimen selesai". Aksi "Lihat eksperimen" tetap terpisah dari status. Tujuan lab pada sidebar dan tab ponsel memakai label singkat "Eksperimen".
 - Badge subjek berlabel dan berikon memakai pasangan latar/tinta subjek; bukan status dekoratif.
 - State kosong memakai garis putus-putus, penjelasan, dan tindakan relevan bila tersedia.
 

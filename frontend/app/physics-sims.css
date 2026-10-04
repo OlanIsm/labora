@@ -53,13 +53,37 @@
   position: relative;
   width: 100%;
 }
-.sim-object-selector { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px; background: var(--surface, #fff); }
-.sim-object-selector [aria-pressed="true"] { background: #fff3bc; border-color: #806500; }
-.sim-chip { cursor: pointer; }
-.sim-chip:hover { border-color: #156b91; }
-.sim-field input[type="range"] { cursor: ew-resize; min-height: 44px; }
-.sim-formula summary::after, .sim-quiz summary::after { content: "Buka"; margin-left: auto; font-size: .8125rem; }
-.sim-formula[open] summary::after, .sim-quiz[open] summary::after { content: "Tutup"; }
+.sim-object-selector {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--surface, #fff);
+}
+.sim-object-selector [aria-pressed="true"] {
+  background: #fff3bc;
+  border-color: #806500;
+}
+.sim-chip {
+  cursor: pointer;
+}
+.sim-chip:hover {
+  border-color: #156b91;
+}
+.sim-field input[type="range"] {
+  cursor: ew-resize;
+  min-height: 44px;
+}
+.sim-formula summary::after,
+.sim-quiz summary::after {
+  content: "Buka";
+  margin-left: auto;
+  font-size: 0.8125rem;
+}
+.sim-formula[open] summary::after,
+.sim-quiz[open] summary::after {
+  content: "Tutup";
+}
 .sim-canvas-container canvas {
   display: block;
   width: 100%;
@@ -262,7 +286,9 @@
   flex-direction: column;
   text-decoration: none;
   color: var(--ink);
-  transition: transform 0.18s ease, border-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease;
 }
 .sim-fisika-card:hover {
   transform: translateY(-2px);
@@ -313,27 +339,101 @@
   font-weight: 800;
   color: var(--blue-ink);
 }
-.circuit-editor .sim-chip[aria-pressed="true"] { background: var(--yellow-light); border-color: var(--physics-ink); color: var(--physics-ink); }
-.circuit-board-scroll { overflow: auto; }
-.circuit-board-scroll.is-over { background: var(--blue-light); outline: 3px solid var(--blue-ink); outline-offset: -3px; }
-.circuit-board { display: block; width: 100%; min-width: 560px; touch-action: none; color: var(--ink); }
-.circuit-board.wiring { cursor: crosshair; }
-.circuit-part { cursor: grab; }
-.circuit-part:active { cursor: grabbing; }
-.circuit-part:focus-visible { outline: none; }
-.circuit-part:focus-visible > line:first-of-type { stroke: #5ec8ff; }
-.circuit-terminal { cursor: crosshair; }
-.circuit-terminal:hover circle:last-child, .circuit-terminal:focus-visible circle:last-child { stroke-width: 5; fill: var(--yellow); }
-.circuit-terminal:focus-visible { outline: none; }
-.circuit-part-label { fill: var(--muted); font: 700 14px "Nunito Sans", sans-serif; pointer-events: none; }
-.circuit-polarity { fill: var(--ink); font: 800 22px "Nunito Sans", sans-serif; }
-.circuit-empty text:first-child { fill: var(--ink); font: 500 24px "Fredoka", sans-serif; }
-.circuit-empty text:last-child { fill: var(--muted); font: 400 16px "Nunito Sans", sans-serif; }
-.circuit-flow { animation: circuit-current 1s linear infinite; pointer-events: none; }
-.circuit-flow.still { animation: none; }
-@keyframes circuit-current { to { stroke-dashoffset: -42; } }
-.circuit-feedback { margin: 0; padding: 12px 16px; font-size: 0.875rem; color: var(--blue-ink); background: var(--blue-light); }
-.circuit-rack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.circuit-editor .sim-chip[aria-pressed="true"] {
+  background: var(--yellow-light);
+  border-color: var(--physics-ink);
+  color: var(--physics-ink);
+}
+.circuit-board-scroll {
+  overflow: auto;
+}
+.circuit-board-scroll.is-over {
+  background: var(--blue-light);
+  outline: 3px solid var(--blue-ink);
+  outline-offset: -3px;
+}
+.circuit-board {
+  display: block;
+  width: 100%;
+  min-width: 560px;
+  touch-action: none;
+  color: var(--ink);
+}
+.circuit-board.wiring {
+  cursor: crosshair;
+}
+.circuit-part {
+  cursor: grab;
+}
+.circuit-part:active {
+  cursor: grabbing;
+}
+.circuit-part:focus-visible {
+  outline: none;
+}
+.circuit-part:focus-visible > line:first-of-type {
+  stroke: #5ec8ff;
+}
+.circuit-terminal {
+  cursor: crosshair;
+}
+.circuit-terminal:hover circle:last-child,
+.circuit-terminal:focus-visible circle:last-child {
+  stroke-width: 5;
+  fill: var(--yellow);
+}
+.circuit-terminal:focus-visible {
+  outline: none;
+}
+.circuit-part-label {
+  fill: var(--muted);
+  font:
+    700 14px "Nunito Sans",
+    sans-serif;
+  pointer-events: none;
+}
+.circuit-polarity {
+  fill: var(--ink);
+  font:
+    800 22px "Nunito Sans",
+    sans-serif;
+}
+.circuit-empty text:first-child {
+  fill: var(--ink);
+  font:
+    500 24px "Fredoka",
+    sans-serif;
+}
+.circuit-empty text:last-child {
+  fill: var(--muted);
+  font:
+    400 16px "Nunito Sans",
+    sans-serif;
+}
+.circuit-flow {
+  animation: circuit-current 1s linear infinite;
+  pointer-events: none;
+}
+.circuit-flow.still {
+  animation: none;
+}
+@keyframes circuit-current {
+  to {
+    stroke-dashoffset: -42;
+  }
+}
+.circuit-feedback {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: var(--blue-ink);
+  background: var(--blue-light);
+}
+.circuit-rack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
 .circuit-rack-item {
   display: flex;
   flex-direction: column;
@@ -343,19 +443,47 @@
   border-radius: 12px;
   background: var(--surface);
   color: var(--ink);
-  font: 800 0.8125rem "Nunito Sans", sans-serif;
+  font:
+    800 0.8125rem "Nunito Sans",
+    sans-serif;
   cursor: grab;
   touch-action: none;
 }
-.circuit-rack-item svg { width: 56px; height: 56px; }
-.circuit-rack-item:hover:not(:disabled) { background: var(--yellow-light); }
-.circuit-rack-item:disabled { opacity: 0.5; cursor: default; }
-.circuit-rack-item.dragging { position: relative; z-index: 100; }
-.circuit-edit-actions, .circuit-move-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.circuit-editor .sim-stage { overflow: visible; }
-.circuit-editor .sim-stage > :first-child { border-radius: 16px 16px 0 0; }
-.circuit-editor .circuit-feedback { border-radius: 0 0 16px 16px; }
-@media (prefers-reduced-motion: reduce) { .circuit-flow { animation: none; } }
+.circuit-rack-item svg {
+  width: 56px;
+  height: 56px;
+}
+.circuit-rack-item:hover:not(:disabled) {
+  background: var(--yellow-light);
+}
+.circuit-rack-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.circuit-rack-item.dragging {
+  position: relative;
+  z-index: 100;
+}
+.circuit-edit-actions,
+.circuit-move-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.circuit-editor .sim-stage {
+  overflow: visible;
+}
+.circuit-editor .sim-stage > :first-child {
+  border-radius: 16px 16px 0 0;
+}
+.circuit-editor .circuit-feedback {
+  border-radius: 0 0 16px 16px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .circuit-flow {
+    animation: none;
+  }
+}
 @media (max-width: 900px) {
   .sim-layout {
     grid-template-columns: 1fr;
@@ -377,14 +505,42 @@
   border-radius: 16px;
   padding: 12px 16px;
 }
-.sim-objective { max-width: 65ch; margin: 12px 0 0; font-size: 1rem; }
-.sim-guide { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.sim-guide .sim-mascot { flex: 1 1 360px; }
-.sim-speech strong { display: block; margin-bottom: 4px; }
-.sim-action-row-inline { display: flex; gap: 10px; flex-wrap: wrap; }
-.sim-experiment-explanation { padding: 8px 0; max-width: 75ch; }
-.sim-experiment-explanation h2 { font-size: 1.35rem; margin-bottom: 8px; }
-.sim-affordance-hint { max-width: 100%; border-radius: 12px; line-height: 1.5; }
+.sim-objective {
+  max-width: 65ch;
+  margin: 12px 0 0;
+  font-size: 1rem;
+}
+.sim-guide {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.sim-guide .sim-mascot {
+  flex: 1 1 360px;
+}
+.sim-speech strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.sim-action-row-inline {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sim-experiment-explanation {
+  padding: 8px 0;
+  max-width: 75ch;
+}
+.sim-experiment-explanation h2 {
+  font-size: 1.35rem;
+  margin-bottom: 8px;
+}
+.sim-affordance-hint {
+  max-width: 100%;
+  border-radius: 12px;
+  line-height: 1.5;
+}
 .sim-mascot > svg {
   flex: none;
   filter: drop-shadow(0 4px 6px rgba(76, 84, 106, 0.14));

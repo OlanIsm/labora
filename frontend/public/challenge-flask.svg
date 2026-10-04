@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 270" fill="none">
+  <ellipse cx="167" cy="250" rx="88" ry="13" fill="#39b8f5" opacity=".3"/>
+  <g transform="rotate(8 165 140)">
+    <defs><clipPath id="flask"><path d="M133 30H197Q204 30 204 38V44H196L188 100 237 178Q265 229 224 243Q197 253 160 252Q112 251 90 233Q67 215 94 177L140 99 144 48H135Q128 48 128 38Q128 30 133 30Z"/></clipPath></defs>
+    <path d="M133 30H197Q204 30 204 38V44H196L188 100 237 178Q265 229 224 243Q197 253 160 252Q112 251 90 233Q67 215 94 177L140 99 144 48H135Q128 48 128 38Q128 30 133 30Z" fill="#eaf9ff"/>
+    <g clip-path="url(#flask)">
+      <path d="M104 148Q132 126 163 143T218 146L255 250H70Z" fill="#ff78b8"/>
+      <path d="M90 196Q125 180 167 210T249 205V260H80Z" fill="#ed6b77" opacity=".5"/>
+      <circle cx="170" cy="190" r="8" fill="#ed6b77"/><circle cx="147" cy="215" r="6" fill="#fff" opacity=".55"/>
+      <path d="M156 56 152 103 115 164M108 179l-5 12" stroke="#fff" stroke-width="11" stroke-linecap="round"/>
+    </g>
+    <path d="M133 30H197Q204 30 204 38V44H196L188 100 237 178Q265 229 224 243Q197 253 160 252Q112 251 90 233Q67 215 94 177L140 99 144 48H135Q128 48 128 38Q128 30 133 30Z" stroke="#155c7b" stroke-width="7" stroke-linejoin="round"/>
+    <path d="m199 168 23 2m-21 23 27 3" stroke="#155c7b" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="170" cy="74" r="4" fill="#155c7b"/><circle cx="167" cy="96" r="3" fill="#155c7b"/>
+  </g>
+  <path d="m62 67 21 15m-1-36 10 20m180 122-14 17" stroke="#fff0a6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M273 83q0 20-20 20 20 0 20 20 0-20 20-20-20 0-20-20Z" fill="#fff0a6"/>
+  <circle cx="39" cy="155" r="8" fill="#fff" opacity=".8"/>
+</svg>

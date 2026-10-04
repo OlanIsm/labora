@@ -315,8 +315,12 @@
   animation: sandbox-fill 220ms ease-out;
 }
 @keyframes sandbox-fill {
-  from { transform: scaleY(0.4); }
-  to { transform: scaleY(1); }
+  from {
+    transform: scaleY(0.4);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 .sandbox-object.dragging,
 .sandbox-rack-item.dragging {
@@ -385,7 +389,8 @@
   outline: 3px solid #427a29;
   outline-offset: -3px;
 }
-.sandbox button.sandbox-slot-placeholder:not(.sandbox-object):not(.sandbox-rack-item) {
+.sandbox
+  button.sandbox-slot-placeholder:not(.sandbox-object):not(.sandbox-rack-item) {
   position: relative;
   width: 100%;
   height: 140px;
@@ -430,7 +435,8 @@
 .sandbox-object.rack-tube small {
   display: none;
 }
-.sandbox button.sandbox-rack-handle:not(.sandbox-object):not(.sandbox-rack-item) {
+.sandbox
+  button.sandbox-rack-handle:not(.sandbox-object):not(.sandbox-rack-item) {
   position: absolute;
   bottom: 0;
   width: 216px;

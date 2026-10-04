@@ -8,8 +8,8 @@ import {
   launchProjectile,
   simulateTrajectory,
   stepProjectile,
-} from "../lib/physics-sims/projectile/engine";
-import { PLANETS } from "../lib/physics-sims/shared/config";
+} from "../features/laboratory/subjects/physics/simulations/domain/projectile/engine";
+import { PLANETS } from "../features/laboratory/subjects/physics/simulations/domain/shared/config";
 
 const EARTH_G = PLANETS.earth.gravity;
 const noDrag = {
@@ -62,7 +62,10 @@ const dragLight = { ...noDrag, dragEnabled: true, mass: 0.5 };
 const dragHeavy = { ...noDrag, dragEnabled: true, mass: 5 };
 const rangeDragLight = simulateTrajectory(45, 20, dragLight).range;
 const rangeDragHeavy = simulateTrajectory(45, 20, dragHeavy).range;
-assert.ok(rangeDragLight < simmed45.range, "drag should reduce range vs no-drag");
+assert.ok(
+  rangeDragLight < simmed45.range,
+  "drag should reduce range vs no-drag",
+);
 assert.ok(
   rangeDragHeavy > rangeDragLight,
   `heavier mass should travel farther under drag: heavy=${rangeDragHeavy} light=${rangeDragLight}`,
@@ -71,7 +74,10 @@ assert.ok(
 // With drag disabled, mass must not affect the trajectory at all.
 const massA = simulateTrajectory(45, 20, { ...noDrag, mass: 0.2 }).range;
 const massB = simulateTrajectory(45, 20, { ...noDrag, mass: 50 }).range;
-assert.ok(Math.abs(massA - massB) < 1e-6, "mass must not affect range when drag is off");
+assert.ok(
+  Math.abs(massA - massB) < 1e-6,
+  "mass must not affect range when drag is off",
+);
 
 // Collision helpers.
 assert.ok(hitsTarget({ x: 60, y: 0.5 }, { x: 60, y: 0, radius: 3 }));

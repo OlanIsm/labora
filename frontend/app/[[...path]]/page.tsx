@@ -1,2 +1,4 @@
-import App from '@/components/App';
-export default function Page() { return <App />; }
+export default function Page() {
+  // Register app URLs; the root layout keeps application state across navigation.
+  return null;
+}
