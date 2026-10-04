@@ -14,6 +14,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export function Detail({
   exp,
@@ -22,11 +23,15 @@ export function Detail({
   exp: Experiment;
   assignment?: Assignment;
 }) {
+  const fromChallenges = useSearchParams().get("from") === "challenges";
   return (
     <>
-      <Link href={`/laboratories/${exp.subject}`} className="back-link">
+      <Link
+        href={fromChallenges ? "/challenges" : `/laboratories/${exp.subject}`}
+        className="back-link"
+      >
         <ArrowLeft size={18} />
-        Kembali ke lab
+        {fromChallenges ? "Kembali ke tantangan" : "Kembali ke lab"}
       </Link>
       <section className="detail-hero">
         <div>

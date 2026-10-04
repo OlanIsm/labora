@@ -19,6 +19,26 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     await page.goto(`${baseUrl}/login`);
     await page.getByRole("button", { name: "Coba sebagai siswa" }).click();
     await page.waitForURL("**/dashboard");
+    await page.goto(`${baseUrl}/challenges`);
+    await page
+      .locator('.experiment-card[href^="/experiments/acid-base"]')
+      .click();
+    await page.waitForURL("**/experiments/acid-base?from=challenges");
+    await page.reload();
+    const challengeBack = page.getByRole("link", {
+      name: "Kembali ke tantangan",
+    });
+    await challengeBack.waitFor();
+    assert.equal(await challengeBack.getAttribute("href"), "/challenges");
+    await challengeBack.click();
+    await page.waitForURL("**/challenges");
+    await page.goto(`${baseUrl}/experiments/acid-base`);
+    assert.equal(
+      await page
+        .getByRole("link", { name: "Kembali ke lab", exact: true })
+        .getAttribute("href"),
+      "/laboratories/chemistry",
+    );
     await page.goto(`${baseUrl}/challenges/run/acid-base`);
     await page
       .getByRole("button", { name: "Letakkan gelas beker", exact: true })

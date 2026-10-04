@@ -8,6 +8,7 @@ import { path } from "@/shared/routes";
 import { SubjectBadge } from "@/shared/ui/SubjectBadge";
 import { ArrowRight, CheckCircle2, Clock3 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function ExperimentCard({
   exp,
@@ -16,8 +17,12 @@ export function ExperimentCard({
   exp: Experiment;
   record?: RecordEntry;
 }) {
+  const fromChallenges = usePathname() === "/challenges";
   return (
-    <Link href={path(exp.id)} className={`experiment-card ${exp.subject}`}>
+    <Link
+      href={`${path(exp.id)}${fromChallenges ? "?from=challenges" : ""}`}
+      className={`experiment-card ${exp.subject}`}
+    >
       <div className={`experiment-art ${exp.subject}`}>
         <Visual exp={exp} state={initialRuntime()} preview />
         <span className="preview-label">Pratinjau simulasi</span>
