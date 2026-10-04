@@ -68,7 +68,9 @@ export default function App() {
   );
   useEffect(() => {
     if (ready && !user && !isPublic) router.replace("/login");
-  }, [ready, user, isPublic, router]);
+    if (ready && user?.role === "teacher" && pathname === "/assignments")
+      router.replace("/teacher");
+  }, [ready, user, isPublic, router, pathname]);
   const exp = getExperiment(experimentId);
   const assignment = assignments.find((a) => a.id === search.get("assignment"));
   let content: React.ReactNode;
@@ -219,7 +221,12 @@ export default function App() {
       <Progress key={user?.id || user?.email || "guest"} records={records} />
     );
   else if (pathname === "/assignments")
-    content = <Assignments assignments={assignments} user={user} />;
+    content =
+      user?.role === "teacher" ? (
+        <Teacher assignments={assignments} records={records} />
+      ) : (
+        <Assignments assignments={assignments} user={user} />
+      );
   else if (segments[0] === "teacher" && user?.role !== "teacher")
     content = (
       <EmptyState

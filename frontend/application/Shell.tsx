@@ -65,7 +65,9 @@ export function Shell({
     { href: "/dashboard", label: "Beranda", icon: Home },
     { href: "/laboratories", label: "Eksperimen", icon: FlaskConical },
     { href: "/challenges", label: "Tantangan", icon: Beaker },
-    { href: "/assignments", label: "Tugas", icon: BookOpen },
+    ...(user?.role === "teacher"
+      ? []
+      : [{ href: "/assignments", label: "Tugas", icon: BookOpen }]),
     { href: "/progress", label: "Progres", icon: Target },
     ...(user?.role === "teacher"
       ? [{ href: "/teacher", label: "Ruang guru", icon: GraduationCap }]

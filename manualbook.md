@@ -195,7 +195,7 @@ Gunakan pilihan keluar pada menu akun atau **Settings** setelah memakai perangka
 | Beranda    | Rekomendasi atau kelanjutan eksperimen, ringkasan progres, pilihan lab, dan tugas |
 | Eksperimen | Pintu masuk eksplorasi Kimia, Fisika, dan Biologi                                 |
 | Tantangan  | Daftar kegiatan terpandu dengan langkah dan pertanyaan                            |
-| Tugas      | Tugas yang tersedia bagi pengguna sesuai aksesnya                                 |
+| Tugas      | Tugas untuk siswa; guru mengelolanya melalui Ruang guru                           |
 | Progres    | Riwayat hasil, penyelesaian eksperimen, dan ringkasan nilai                       |
 | Ruang guru | Pengelolaan tugas dan laporan; muncul untuk pengguna dengan peran guru            |
 | Settings   | Profil, akun, kata sandi, serta sekolah dan kelas pada akun online                |

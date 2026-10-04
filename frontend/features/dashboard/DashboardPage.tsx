@@ -197,7 +197,10 @@ export function Dashboard({
             <h2>
               {user?.role === "teacher" ? "Tugas kelasmu" : "Tugas dari guru"}
             </h2>
-            <Link href="/assignments" className="text-link">
+            <Link
+              href={user?.role === "teacher" ? "/teacher" : "/assignments"}
+              className="text-link"
+            >
               Semua tugas
             </Link>
           </div>

@@ -67,6 +67,11 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     await page.waitForURL("**/login");
     await page.getByRole("button", { name: "Coba sebagai siswa" }).click();
     await page.waitForURL("**/dashboard");
+    await page.locator('.app-sidebar a[href="/assignments"]').waitFor();
+    assert.equal(
+      await page.locator('.bottom-nav a[href="/assignments"]').count(),
+      1,
+    );
     await page.goto(`${baseUrl}/challenges`);
     await page.locator(".challenge-subject h2").first().waitFor();
     assert.deepEqual(
@@ -218,6 +223,29 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     await page.goto(`${baseUrl}/login`);
     await page.getByRole("button", { name: "Coba sebagai guru" }).click();
     await page.waitForURL("**/dashboard");
+    await page.getByRole("heading", { name: /Mau coba apa hari/ }).waitFor();
+    assert.equal(
+      await page
+        .locator(
+          '.app-sidebar a[href="/assignments"], .bottom-nav a[href="/assignments"]',
+        )
+        .count(),
+      0,
+    );
+    assert.equal(
+      await page
+        .getByRole("link", { name: "Semua tugas", exact: true })
+        .getAttribute("href"),
+      "/teacher",
+    );
+    await page.goto(`${baseUrl}/assignments`);
+    await page.waitForURL("**/teacher");
+    await page
+      .getByRole("heading", {
+        name: "Siapkan eksperimen untuk kelasmu.",
+        exact: true,
+      })
+      .waitFor();
     await page.goto(`${baseUrl}/teacher/new`);
     await page
       .getByLabel("Kelas atau kelompok", { exact: true })
