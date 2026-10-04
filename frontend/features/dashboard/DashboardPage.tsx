@@ -15,7 +15,13 @@ import type { RecordEntry } from "@/features/progress/model";
 import { date } from "@/shared/date";
 import { labPath, path, resultPath } from "@/shared/routes";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { ArrowRight, BookOpen, CheckCircle2, Clock3 } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  FlaskConical,
+} from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/shared/infrastructure/api";
@@ -95,6 +101,9 @@ export function Dashboard({
       </div>
       <section className={`next-experiment ${recommended.subject}`}>
         <div className="next-copy">
+          <span className="featured-experiment-label">
+            <FlaskConical size={16} /> Eksperimen unggulan
+          </span>
           <h2>{recommended.title}</h2>
           <p>{recommended.subtitle}</p>
           <div className="inline-meta">
@@ -102,7 +111,10 @@ export function Dashboard({
               <Clock3 size={16} />
               {recommended.duration} menit
             </span>
-            <span>{recommended.steps.length} langkah berpandu</span>
+            <span>
+              <BookOpen size={16} />
+              {recommended.steps.length} langkah berpandu
+            </span>
           </div>
           <Link
             href={
@@ -117,6 +129,31 @@ export function Dashboard({
           </Link>
         </div>
         <div className="next-preview">
+          <svg
+            className="preview-accents"
+            viewBox="0 0 400 220"
+            aria-hidden="true"
+          >
+            <path
+              d="M77 76l-12-10m8 27H57m20 12-12 10"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+            <path
+              d="m283 34-9 18m31-3-18 7"
+              stroke="#fff0a6"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M80 143q0 15-15 15 15 0 15 15 0-15 15-15-15 0-15-15Z"
+              fill="#fff0a6"
+            />
+            <circle cx="325" cy="179" r="5" fill="#ffd84d" />
+            <circle cx="49" cy="49" r="5" fill="#ffd84d" />
+            <circle cx="345" cy="112" r="7" fill="#fff" opacity=".55" />
+          </svg>
           <Visual exp={recommended} state={initialRuntime()} preview />
           <span className="preview-label">Pratinjau simulasi</span>
         </div>
@@ -142,7 +179,7 @@ export function Dashboard({
           />
         </div>
         <Link href="/progress" className="text-link">
-          Lihat progres
+          Lihat progres <ArrowRight size={16} />
         </Link>
       </div>
       <section className="home-section">
