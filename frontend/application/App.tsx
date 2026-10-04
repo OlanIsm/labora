@@ -263,7 +263,6 @@ export default function App() {
         onLogout={logout}
         wide={
           segments[0] === "lab" ||
-          pathname === "/challenges" ||
           (segments[0] === "challenges" && segments[1] === "run") ||
           isSandbox ||
           !!physicsSimulation
