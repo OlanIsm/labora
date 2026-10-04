@@ -25,12 +25,46 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
       }),
     );
     await page.goto(baseUrl, { timeout: 60000 });
+    await page.locator(".lab-choice").first().waitFor();
+    assert.deepEqual(
+      await page
+        .locator(".lab-choice")
+        .evaluateAll((cards) => cards.map((card) => card.getAttribute("href"))),
+      ["/login", "/login", "/login"],
+    );
+    assert.equal(
+      await page
+        .getByRole("link", { name: "Coba Labora", exact: true })
+        .getAttribute("href"),
+      "/login",
+    );
+    for (const subject of ["Kimia", "Fisika", "Biologi"]) {
+      await page
+        .locator(".lab-choice")
+        .filter({
+          has: page.getByRole("heading", { name: subject, exact: true }),
+        })
+        .click();
+      await page.waitForURL("**/login");
+      await page.goto(baseUrl);
+    }
     await page
       .getByRole("link", { name: /Mulai eksperimen/i })
       .first()
       .click();
-    await page.waitForURL("**/dashboard");
-    await page.goto(`${baseUrl}/login`);
+    await page.waitForURL("**/login");
+    await page.getByRole("button", { name: "Coba sebagai siswa" }).waitFor();
+    assert.equal(
+      await page
+        .getByRole("link", { name: "Daftar di sini", exact: true })
+        .getAttribute("href"),
+      "/register",
+    );
+    await page.goto(baseUrl);
+    await page
+      .getByRole("link", { name: "Pilih eksperimenmu", exact: true })
+      .click();
+    await page.waitForURL("**/login");
     await page.getByRole("button", { name: "Coba sebagai siswa" }).click();
     await page.waitForURL("**/dashboard");
     await page.goto(`${baseUrl}/challenges`);

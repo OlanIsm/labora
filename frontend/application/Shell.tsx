@@ -98,15 +98,18 @@ export function Shell({
             </nav>
             <div className="header-actions">
               {user ? (
-                <Link href="/dashboard" className="button primary">
-                  Buka beranda
+                <Link
+                  href={pathname === "/" ? "/login" : "/dashboard"}
+                  className="button primary"
+                >
+                  {pathname === "/" ? "Pilih akses" : "Buka beranda"}
                 </Link>
               ) : (
                 <>
                   <Link href="/login" className="login-link">
                     Masuk
                   </Link>
-                  <Link href="/dashboard" className="button primary">
+                  <Link href="/login" className="button primary">
                     Coba Labora
                   </Link>
                 </>

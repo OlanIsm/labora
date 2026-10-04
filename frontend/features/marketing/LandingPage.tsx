@@ -38,7 +38,7 @@ export function Landing() {
             Campur larutan, nyalakan rangkaian, atau intip sel lewat mikroskop.
             Di Labora, kamu bisa mencoba eksperimen langsung dari layar.
           </p>
-          <Link href="/dashboard" className="button primary large">
+          <Link href="/login" className="button primary large">
             Mulai eksperimen <ArrowRight size={20} />
           </Link>
           <p className="hero-footnote">
@@ -104,8 +104,8 @@ export function Landing() {
             Setiap eksperimen punya panduan. Kamu boleh mencoba, salah, dan
             mengulang sampai paham.
           </p>
-          <Link href="/dashboard" className="text-link">
-            Buka dashboard <ArrowRight size={18} />
+          <Link href="/login" className="text-link">
+            Pilih cara mencoba <ArrowRight size={18} />
           </Link>
         </div>
         <dl className="learning-list">
@@ -148,7 +148,7 @@ export function Landing() {
           <h2>Pertanyaan berikutnya, kamu yang tentukan.</h2>
           <p>Mulai dari eksperimen sederhana. Lihat apa yang berubah.</p>
         </div>
-        <Link href="/dashboard" className="button primary large">
+        <Link href="/login" className="button primary large">
           Pilih eksperimenmu
         </Link>
       </section>

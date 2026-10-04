@@ -14,7 +14,7 @@ export function LabChoices({ enterApp = false }: { enterApp?: boolean }) {
       {subjects.map((s) => (
         <Link
           key={s.id}
-          href={enterApp ? "/dashboard" : laboratoryPath(s.id)}
+          href={enterApp ? "/login" : laboratoryPath(s.id)}
           className={`lab-choice ${s.id}`}
         >
           <div className="lab-choice-head">
