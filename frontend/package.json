@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run check:architecture && npm run typecheck && npm run format:check",
-    "test:browser": "node tests/app-shell.browser.cjs && node tests/application-flow.browser.cjs && node tests/header-mobile.browser.cjs && node tests/api-auth.browser.cjs && node tests/navigation-cache.browser.cjs && node tests/auth-form.browser.cjs"
+    "test:browser": "node tests/app-shell.browser.cjs && node tests/application-flow.browser.cjs && node tests/header-mobile.browser.cjs && node tests/api-auth.browser.cjs && node tests/navigation-cache.browser.cjs && node tests/auth-form.browser.cjs && node tests/guided-action-latency.browser.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

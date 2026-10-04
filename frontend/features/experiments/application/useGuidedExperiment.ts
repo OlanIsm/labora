@@ -14,6 +14,23 @@ import { act, answer, initialRuntime } from "../domain/engine";
 import type { Experiment, Runtime } from "../model";
 import type { RuntimeRepository } from "../repository";
 
+function applyAction(
+  exp: Experiment,
+  state: Runtime,
+  action: string,
+  item: string,
+) {
+  const step = exp.steps[state.step];
+  const prepared =
+    exp.subject !== "chemistry" &&
+    action !== "place" &&
+    step?.item === item &&
+    !state.placed.includes(item)
+      ? act(exp, state, "place", item)
+      : state;
+  return act(exp, prepared, action, item);
+}
+
 export function useGuidedExperiment(
   exp: Experiment,
   assignment: Assignment | undefined,
@@ -119,6 +136,7 @@ export function useGuidedExperiment(
     payload: Record<string, unknown>,
   ) {
     if (!session.current || locked.current || !hydrated) return;
+    const confirmedState = session.current.state;
     locked.current = true;
     setPending(true);
     const path = `/sessions/${session.current.id}/${kind}`;
@@ -132,6 +150,18 @@ export function useGuidedExperiment(
     };
     pendingEvent.current = event;
     browserStorage.write(pendingKey, event);
+    if (
+      event.path.endsWith("/actions") &&
+      typeof event.body.action === "string" &&
+      typeof event.body.item === "string"
+    ) {
+      const action = event.body.action;
+      const item = event.body.item;
+      const definition = session.current.definition || exp;
+      setState((s) => applyAction(definition, s, action, item));
+      setFeedbackError(false);
+      setInteraction((n) => n + 1);
+    }
     try {
       const outcome = await apiFetch<EventOutcome>(event.path, {
         method: "POST",
@@ -157,19 +187,20 @@ export function useGuidedExperiment(
           pendingEvent.current = null;
           browserStorage.remove(pendingKey);
         } catch {
-          setState((s) => ({
-            ...s,
+          setState({
+            ...confirmedState,
             feedback: "Sesi belum tersinkron. Coba lagi setelah koneksi pulih.",
-          }));
+          });
+          setFeedbackError(true);
         }
       } else {
-        setState((s) => ({
-          ...s,
+        setState({
+          ...confirmedState,
           feedback:
             error instanceof Error
               ? `${error.message} Tekan tindakan lagi untuk mengirim ulang.`
               : "Koneksi terputus. Tindakan masih menunggu pengiriman.",
-        }));
+        });
         setFeedbackError(true);
       }
     } finally {
@@ -224,16 +255,7 @@ export function useGuidedExperiment(
     if (current && (current.action !== action || current.item !== item))
       flagError();
     else setFeedbackError(false);
-    setState((s) => {
-      const prepared =
-        exp.subject !== "chemistry" &&
-        action !== "place" &&
-        current?.item === item &&
-        !s.placed.includes(item)
-          ? act(exp, s, "place", item)
-          : s;
-      return act(exp, prepared, action, item);
-    });
+    setState((s) => applyAction(activeExperiment, s, action, item));
     setHint(false);
     setSelected(null);
   }
