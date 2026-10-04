@@ -41,9 +41,34 @@ const assert = require("node:assert/strict");
           ),
         );
     assert.equal(await collapsed(), true);
+    assert.equal(
+      await page.locator('.app-sidebar a[href="/settings"]').count(),
+      0,
+    );
+    assert.equal(await page.locator(".sidebar-profile").count(), 0);
+    const lower = await page
+      .locator(".dashboard-lower > section")
+      .evaluateAll((sections) =>
+        sections.map((section) => ({
+          heading: section.querySelector("h2").getBoundingClientRect().y,
+          panel: section.querySelector(".empty-state").getBoundingClientRect(),
+        })),
+      );
+    assert.equal(lower[0].heading, lower[1].heading);
+    assert.equal(lower[0].panel.y, lower[1].panel.y);
+    assert.equal(lower[0].panel.height, lower[1].panel.height);
+    const iconBox = await page
+      .locator("#app-navigation a svg")
+      .first()
+      .boundingBox();
     await page.locator(".app-sidebar").hover();
     await settleSidebar();
     assert.equal(await collapsed(), false);
+    assert.deepEqual(
+      await page.locator("#app-navigation a svg").first().boundingBox(),
+      iconBox,
+      "Sidebar icons keep their position while expanding",
+    );
     assert.deepEqual(
       await page.locator(".app-frame").boundingBox(),
       frame,
@@ -81,16 +106,16 @@ const assert = require("node:assert/strict");
     await page.locator(".app-sidebar").hover();
     await page
       .locator("#app-navigation")
-      .getByRole("link", { name: "Settings", exact: true })
+      .getByRole("link", { name: "Progres", exact: true })
       .click();
-    await page.waitForURL("**/settings");
+    await page.waitForURL("**/progress");
     await page.locator(".page-heading").hover();
     assert.equal(
       await collapsed(),
       false,
       "Clicking a menu pins the sidebar open",
     );
-    await page.getByRole("heading", { name: "Settings", exact: true }).click();
+    await page.locator(".page-heading").click();
     assert.equal(
       await collapsed(),
       true,
@@ -102,6 +127,12 @@ const assert = require("node:assert/strict");
         .count(),
       0,
     );
+    await page.getByRole("button", { name: /^Menu akun/ }).click();
+    await page
+      .locator(".header-account-menu")
+      .getByRole("link", { name: "Settings", exact: true })
+      .click();
+    await page.waitForURL("**/settings");
     assert.equal(
       await page
         .locator(".app-sidebar")

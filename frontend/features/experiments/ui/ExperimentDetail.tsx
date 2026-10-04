@@ -58,7 +58,7 @@ export function Detail({
             </span>
           </div>
           <Link
-            href={`${labPath(exp.id)}${assignment ? `?assignment=${assignment.id}` : ""}`}
+            href={`${labPath(exp.id)}?from=challenges${assignment ? `&assignment=${assignment.id}` : ""}`}
             className="button primary large"
           >
             {assignment ? "Mulai tugas" : "Masuk dan coba"}{" "}
