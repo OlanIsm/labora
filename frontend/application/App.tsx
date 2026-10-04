@@ -233,7 +233,12 @@ export default function App() {
         assignments={assignments}
         records={records}
         onLogout={logout}
-        wide={segments[0] === "lab" || isSandbox || !!physicsSimulation}
+        wide={
+          segments[0] === "lab" ||
+          (segments[0] === "challenges" && segments[1] === "run") ||
+          isSandbox ||
+          !!physicsSimulation
+        }
       >
         {syncError && (
           <div className="sync-error" role="alert">

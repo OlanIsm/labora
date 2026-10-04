@@ -1565,7 +1565,7 @@ summary > span {
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  padding: 16px 24px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--line);
 }
 .lab-bar > strong {
@@ -1576,6 +1576,8 @@ summary > span {
 }
 .lab-bar > .back-link {
   font-size: 0.875rem;
+  padding-right: 20px;
+  border-right: 1px solid var(--line);
 }
 .lab-layout {
   display: grid;
@@ -1583,7 +1585,7 @@ summary > span {
   align-items: start;
 }
 .lab-primary {
-  padding: 24px;
+  padding: 20px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1593,7 +1595,7 @@ summary > span {
 }
 .lab-primary > .step-panel {
   padding-top: 0;
-  padding-bottom: 20px;
+  padding-bottom: 12px;
 }
 .workspace-scene {
   position: relative;
@@ -1777,7 +1779,7 @@ summary > span {
   gap: 10px;
   font-size: 0.875rem;
   font-weight: 800;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 .lab-progress .progress-track {
   flex-basis: 100%;
@@ -1792,13 +1794,51 @@ summary > span {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 20px 0;
+  padding: 12px 18px;
   color: var(--subject-ink);
   font-size: 0.875rem;
   font-weight: 700;
 }
 .workspace .visual {
-  height: 340px;
+  height: 260px;
+  min-height: 260px;
+}
+.workspace.chemistry {
+  overflow: hidden;
+}
+.workspace.chemistry .workspace-scene {
+  border-radius: 0;
+  background: #b8dfff url("/lab-backgrounds/chemistry.webp") center / cover
+    no-repeat;
+}
+.workspace.chemistry .vessel-target {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.workspace.chemistry .science-beaker {
+  width: 126px;
+  height: 148px;
+}
+.workspace.chemistry .science-readout {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(85%, 400px);
+  padding: 10px 16px;
+  border-radius: 20px;
+  background: rgb(234 249 255 / 94%);
+  color: var(--blue-ink);
+  text-align: center;
+}
+.workspace.chemistry .science-readout strong {
+  font-size: 1.25rem;
+}
+.workspace.chemistry .vessel-placeholder {
+  top: 45%;
+  white-space: nowrap;
 }
 .workspace.drop-over {
   outline: 3px dashed #427a29;
@@ -1880,11 +1920,15 @@ input[type="range"] {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 8px;
   font-size: 0.875rem;
   color: var(--muted);
   margin-bottom: 10px;
+}
+.step-panel-heading h2 {
+  flex: 1;
+  min-width: 200px;
 }
 .hint-button {
   display: inline-flex;
@@ -1908,7 +1952,7 @@ input[type="range"] {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 12px;
 }
 .mobile-tools {
   display: none;
@@ -1927,11 +1971,11 @@ input[type="range"] {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 16px;
+  padding: 12px 16px;
   background: var(--green-light);
   color: #365f27;
   border-radius: 12px;
-  margin-top: 20px;
+  margin-top: 12px;
   font-size: 0.9375rem;
 }
 .feedback-line svg {
@@ -1985,9 +2029,10 @@ input[type="range"] {
   border: 0;
   border-top: 1px solid var(--line);
   border-radius: 0;
+  margin-top: 12px;
 }
 .lab-checklist summary {
-  padding: 18px 0;
+  padding: 12px 0;
 }
 .lab-checklist ol {
   list-style: none;
@@ -2020,7 +2065,7 @@ input[type="range"] {
   min-width: 0;
   max-width: none;
   margin: 0;
-  padding: 24px 20px;
+  padding: 20px 16px;
   border: 0;
   background: #fff;
   color: var(--ink);
@@ -2041,7 +2086,7 @@ input[type="range"] {
   font-size: 0.875rem;
 }
 .inventory-group {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 .inventory-group h3 {
   font-size: 0.9375rem;
@@ -2061,7 +2106,7 @@ input[type="range"] {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 136px;
+  min-height: 120px;
   padding: 30px 8px 12px;
   border: 1px solid var(--control-border);
   background: #fff;
@@ -2997,7 +3042,7 @@ form textarea {
     padding: 16px;
   }
   .workspace-heading {
-    padding: 16px 16px 0;
+    padding: 12px 16px;
     font-size: 0.8125rem;
   }
   .workspace .visual {
@@ -3027,6 +3072,10 @@ form textarea {
   }
   .step-panel-heading {
     margin-bottom: 8px;
+  }
+  .step-panel-heading h2 {
+    flex-basis: 100%;
+    min-width: 0;
   }
   .step-actions {
     margin-top: 14px;

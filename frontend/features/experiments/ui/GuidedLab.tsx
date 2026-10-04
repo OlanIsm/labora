@@ -221,6 +221,9 @@ export function Lab({
             <section className="step-panel">
               <div className="step-panel-heading">
                 {current && (
+                  <h2>{stage?.instruction || current.instruction}</h2>
+                )}
+                {current && (
                   <button
                     className="hint-button"
                     aria-expanded={hint}
@@ -233,7 +236,6 @@ export function Lab({
               </div>
               {current ? (
                 <>
-                  <h2>{stage?.instruction || current.instruction}</h2>
                   {assignment?.instructions && state.step === 0 && (
                     <p>{assignment.instructions}</p>
                   )}
