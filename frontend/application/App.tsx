@@ -71,8 +71,10 @@ export default function App() {
   let content: React.ReactNode;
   if (pathname === "/") content = <Landing />;
   else if (pathname === "/kimia") content = <ChemistryLabList />;
-  else if (pathname === "/login" || pathname === "/register")
-    content = <Auth gateway={applicationServices.auth} onAuth={auth} />;
+  else if (["/login", "/register", "/forgot-password"].includes(pathname))
+    content = (
+      <Auth key={pathname} gateway={applicationServices.auth} onAuth={auth} />
+    );
   else if (pathname === "/dashboard")
     content = (
       <Dashboard

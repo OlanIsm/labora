@@ -21,7 +21,12 @@ export function Auth({
   const router = useRouter();
   const authPath = usePathname();
   const [role, setRole] = useState<"student" | "teacher">("student");
-  const mode = authPath === "/register" ? "register" : "login";
+  const mode =
+    authPath === "/register"
+      ? "register"
+      : authPath === "/forgot-password"
+        ? "recover"
+        : "login";
   const [name, setName] = useState("");
   const [className, setClassName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,6 +38,14 @@ export function Auth({
     setMessage("");
     setBusy(true);
     try {
+      if (mode === "recover") {
+        const result = await apiFetch<{ message: string }>("/auth/recover", {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        });
+        setMessage(result.message);
+        return;
+      }
       const profile: User = {
         name: name.trim() || email.split("@")[0],
         email,
@@ -94,13 +107,21 @@ export function Auth({
         <Visual exp={experiments[0]} state={initialRuntime()} preview />
       </section>
       <section className="auth-form">
-        <h1>{mode === "register" ? "Buat akun Labora" : "Masuk ke Labora"}</h1>
+        <h1>
+          {mode === "register"
+            ? "Buat akun Labora"
+            : mode === "recover"
+              ? "Lupa password?"
+              : "Masuk ke Labora"}
+        </h1>
         <p>
           {mode === "register"
             ? "Siapkan ruang untuk eksperimenmu."
-            : "Lanjutkan eksperimen dan lihat progresmu."}
+            : mode === "recover"
+              ? "Masukkan email akunmu untuk menerima tautan pemulihan."
+              : "Lanjutkan eksperimen dan lihat progresmu."}
         </p>
-        <div className="demo-login">
+        <div className="demo-login" hidden={mode === "recover"}>
           <strong>Mau mencoba dulu?</strong>
           <p>
             Mode demo tidak perlu akun. Data demo tersimpan hanya di browser
@@ -125,11 +146,13 @@ export function Auth({
             </button>
           </div>
         </div>
-        <div className="auth-divider">
-          {gateway.configured
-            ? "atau gunakan akunmu"
-            : "atau buat profil lokal di browser ini"}
-        </div>
+        {mode !== "recover" && (
+          <div className="auth-divider">
+            {gateway.configured
+              ? "atau gunakan akunmu"
+              : "atau buat profil lokal di browser ini"}
+          </div>
+        )}
         {!gateway.configured && (
           <p className="local-note">
             Login sekolah belum terhubung. Formulir ini hanya membuat profil
@@ -185,74 +208,75 @@ export function Auth({
             <input
               required
               type="email"
+              name="email"
               autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email kamu"
             />
           </label>
-          <label>
-            Kata sandi
-            <input
-              required
-              type="password"
-              autoComplete={
-                mode === "register" ? "new-password" : "current-password"
-              }
-              minLength={gateway.configured ? 8 : 6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={
-                gateway.configured ? "Minimal 8 karakter" : "Minimal 6 karakter"
-              }
-            />
-          </label>
+          {mode !== "recover" && (
+            <label>
+              Kata sandi
+              <input
+                required
+                type="password"
+                autoComplete={
+                  mode === "register" ? "new-password" : "current-password"
+                }
+                minLength={gateway.configured ? 8 : 6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={
+                  gateway.configured
+                    ? "Minimal 8 karakter"
+                    : "Minimal 6 karakter"
+                }
+              />
+            </label>
+          )}
           {message && (
             <p className="form-error" role="alert">
               {message}
             </p>
           )}
-          <button className="button primary full" disabled={busy}>
+          <button
+            className="button primary full"
+            disabled={busy || (mode === "recover" && !gateway.configured)}
+          >
             {busy
               ? "Sedang memproses..."
-              : !gateway.configured
-                ? "Buka profil lokal"
-                : mode === "register"
-                  ? "Buat akun"
-                  : "Masuk"}
+              : mode === "recover"
+                ? "Kirim tautan pemulihan"
+                : !gateway.configured
+                  ? "Buka profil lokal"
+                  : mode === "register"
+                    ? "Buat akun"
+                    : "Masuk"}
           </button>
         </form>
-        {gateway.configured && mode === "login" && (
-          <button
-            type="button"
-            className="button ghost full"
-            disabled={busy || !email}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                const result = await apiFetch<{ message: string }>(
-                  "/auth/recover",
-                  { method: "POST", body: JSON.stringify({ email }) },
-                );
-                setMessage(result.message);
-              } catch (e) {
-                setMessage(
-                  e instanceof Error ? e.message : "Pemulihan belum tersedia.",
-                );
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Kirim tautan pemulihan kata sandi
-          </button>
+        {mode === "recover" ? (
+          <p className="auth-switch">
+            <Link href="/login">Kembali ke login</Link>
+          </p>
+        ) : (
+          <div className="auth-switch">
+            <span>
+              {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
+              <Link href={mode === "register" ? "/login" : "/register"}>
+                {mode === "register" ? "Masuk" : "Daftar di sini"}
+              </Link>
+            </span>
+            {gateway.configured && mode === "login" && (
+              <span className="auth-switch-recovery">
+                <span className="auth-switch-divider" aria-hidden="true" />
+                <Link href="/forgot-password">Lupa password</Link>
+              </span>
+            )}
+          </div>
         )}
-        <p className="auth-switch">
-          {mode === "register" ? "Sudah punya akun?" : "Belum punya akun?"}{" "}
-          <Link href={mode === "register" ? "/login" : "/register"}>
-            {mode === "register" ? "Masuk" : "Daftar di sini"}
-          </Link>
-        </p>
       </section>
     </div>
   );

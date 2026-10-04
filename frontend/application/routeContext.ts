@@ -3,6 +3,7 @@ const publicPaths = new Set([
   "/",
   "/login",
   "/register",
+  "/forgot-password",
   "/dashboard",
   "/laboratories",
   "/settings",

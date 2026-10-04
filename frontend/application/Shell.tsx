@@ -59,7 +59,9 @@ export function Shell({
       sessionStorage.removeItem("labora-sidebar-pinned");
     } catch {}
   }
-  const marketing = ["/", "/login", "/register"].includes(pathname);
+  const marketing = ["/", "/login", "/register", "/forgot-password"].includes(
+    pathname,
+  );
   const nav = [
     { href: "/dashboard", label: "Beranda", icon: Home },
     { href: "/laboratories", label: "Eksperimen", icon: FlaskConical },

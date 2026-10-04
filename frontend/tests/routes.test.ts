@@ -13,6 +13,7 @@ for (const route of [
   "/",
   "/login",
   "/register",
+  "/forgot-password",
   "/dashboard",
   "/laboratories",
   "/settings",
