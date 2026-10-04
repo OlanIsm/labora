@@ -6,13 +6,18 @@ import { initialRuntime } from "@/features/experiments/domain/engine";
 import { Visual } from "@/features/experiments/ui/ExperimentVisual";
 import { labPath } from "@/shared/routes";
 import { SubjectBadge } from "@/shared/ui/SubjectBadge";
+import { subjects } from "@/shared/subjects";
+import { Icon } from "./EquipmentIcon";
 import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
   Clock3,
   GraduationCap,
+  Lightbulb,
+  Sparkles,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -24,6 +29,9 @@ export function Detail({
   assignment?: Assignment;
 }) {
   const fromChallenges = useSearchParams().get("from") === "challenges";
+  const subject = subjects.find((subject) => subject.id === exp.subject)!;
+  const equipmentIcon = (name: string) =>
+    exp.items.find((item) => item.name === name)?.icon || "bag";
   return (
     <>
       <Link
@@ -62,7 +70,7 @@ export function Detail({
         </div>
         <div className={`detail-visual ${exp.subject}`}>
           <Visual exp={exp} state={initialRuntime()} preview />
-          <span className="preview-label">Pratinjau hasil simulasi</span>
+          <span className="preview-label">Pratinjau simulasi</span>
         </div>
       </section>
       {assignment && (
@@ -75,25 +83,59 @@ export function Detail({
         </div>
       )}
       <div className="detail-sections">
-        <section>
-          <h2>Apa yang akan kamu pelajari?</h2>
-          <p>{exp.objective}</p>
-          <h3>Sains di baliknya</h3>
-          <p>{exp.theory}</p>
+        <section className="detail-learning">
+          <div className="detail-panel-heading">
+            <div>
+              <h2>Apa yang akan kamu pelajari?</h2>
+              <p>{exp.objective}</p>
+            </div>
+            <Image
+              className="detail-learning-mascot"
+              src={subject.mascot}
+              alt={`Maskot ${subject.name}`}
+              width={112}
+              height={112}
+            />
+          </div>
+          <div className="detail-theory">
+            <span className="detail-theory-icon" aria-hidden="true">
+              <Lightbulb size={24} />
+            </span>
+            <div>
+              <h3>Sains di baliknya</h3>
+              <p>{exp.theory}</p>
+            </div>
+          </div>
         </section>
-        <section>
-          <h2>Alat dan bahan</h2>
+        <section className={`detail-materials ${exp.subject}`}>
+          <div className="detail-panel-heading">
+            <h2>Alat dan bahan</h2>
+            <div className="detail-equipment-art" aria-hidden="true">
+              <Sparkles className="equipment-sparkle" size={24} />
+              {exp.items.slice(0, 3).map((item) => (
+                <Icon key={item.id} name={item.icon} size={58} />
+              ))}
+            </div>
+          </div>
           <div className="materials-list">
             <div>
               <h3>Alat</h3>
               {exp.equipment.map((x) => (
-                <span key={x}>{x}</span>
+                <span key={x}>
+                  <Icon name={equipmentIcon(x)} size={20} />
+                  {x}
+                </span>
               ))}
             </div>
             <div>
               <h3>Bahan</h3>
               {exp.materials.length ? (
-                exp.materials.map((x) => <span key={x}>{x}</span>)
+                exp.materials.map((x) => (
+                  <span key={x}>
+                    <Icon name={equipmentIcon(x)} size={20} />
+                    {x}
+                  </span>
+                ))
               ) : (
                 <span>Tidak perlu bahan tambahan</span>
               )}
