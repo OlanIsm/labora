@@ -246,7 +246,15 @@ export function Lab({
                       <span>{stage?.hint || current.hint}</span>
                     </div>
                   )}
-                  {current.question ? (
+                  {current.action === "continue" ? (
+                    <button
+                      className="button primary"
+                      disabled={pending || !hydrated}
+                      onClick={() => doAction("continue", "instruction")}
+                    >
+                      Lanjutkan <ArrowRight size={18} />
+                    </button>
+                  ) : current.question ? (
                     <div className="question-block">
                       <h3>{current.question.prompt}</h3>
                       <div className="answer-grid">

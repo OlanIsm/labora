@@ -200,7 +200,8 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     );
     assert.equal(assignment.title, "Penyelidikan indikator");
     assert.equal(assignment.className, "VIII A");
-    assert.equal(assignment.stages.length, 4);
+    assert.equal(assignment.stages.length, 3);
+    assert.ok(assignment.stages.every((stage) => stage.kind === "action"));
     assert.deepEqual(errors, []);
     console.log(
       "Application flow passed: landing entry, student/teacher login, complete guided experiment, persisted result, free chemistry/biology, physics launch, and assignment publication.",

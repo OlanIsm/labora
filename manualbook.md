@@ -619,9 +619,14 @@ Antarmuka saat ini membuat undangan dengan batas 100 penggunaan dan menampilkan 
 3. Pilih eksperimen dari katalog.
 4. Isi judul dan arahan.
 5. Pilih kelas ketika tugas akan diterbitkan.
-6. Periksa panduan tiap tahap: instruksi, petunjuk, serta pertanyaan dan pilihan yang tersedia.
-7. Sesuaikan kunci jawaban dan penjelasan melalui fasilitas authoring yang tersedia bagi guru.
-8. Simpan tugas.
+6. Periksa langkah simulasi awal. Kuis tidak ditambahkan secara otomatis.
+7. Gunakan **Tambah langkah** untuk menambahkan bacaan atau pengamatan. Pada **Jenis langkah**, pilih bacaan dengan tombol Lanjutkan atau tindakan simulasi yang tersedia.
+8. Hapus langkah yang tidak diperlukan melalui ikon tempat sampah.
+9. Jika diperlukan, tekan **Tambah kuis** atau **Tambah kuis setelah ini**. Guru dapat menambahkan beberapa kuis, termasuk dua kuis berurutan.
+10. Isi pertanyaan, 2?6 pilihan jawaban, kunci jawaban, dan penjelasan opsional. Gunakan **Tambah pilihan** atau ikon hapus pilihan untuk mengatur jumlahnya.
+11. Simpan tugas. Tugas tanpa kuis tetap dapat disimpan dan diselesaikan.
+
+Satu tugas dapat memuat hingga 100 langkah dan kuis. Progres siswa mengikuti seluruh tahap yang disusun guru; hasil kuis mengikuti pertanyaan yang benar-benar ditambahkan.
 
 Guru menggunakan tahapan dari eksperimen yang sudah tersedia. Pembuat tugas bukan editor untuk menciptakan engine simulasi baru atau menambahkan sembarang alat di luar katalog.
 

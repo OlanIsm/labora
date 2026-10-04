@@ -2697,6 +2697,30 @@ form textarea {
   font-weight: 800;
   flex-shrink: 0;
 }
+.builder-stage-heading,
+.builder-add-actions,
+.builder-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.builder-stage-heading {
+  justify-content: space-between;
+}
+.builder-option > label {
+  flex: 1;
+  min-width: 0;
+}
+.builder-option > button {
+  align-self: flex-end;
+}
+.builder-add-actions {
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+.builder-add-quiz {
+  margin-top: 16px;
+}
 .stage-question {
   background: var(--green-light);
   border-radius: 12px;

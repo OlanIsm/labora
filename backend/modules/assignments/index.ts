@@ -1,6 +1,6 @@
 import "server-only";
 import type { AssignmentDTO, AssignmentReport } from "@contracts/laboratory";
-import type { Experiment } from "@contracts/experiment";
+import { validateStages } from "./draft";
 import { requireIdentity } from "../identity";
 import { requireTeacher } from "../classrooms";
 import { experimentVersion, withAnswerKeys } from "../catalog";
@@ -157,64 +157,10 @@ async function validateDraft(body: Record<string, unknown>) {
       text(body.experimentId, "experimentId", 80),
     ),
     privateExp = await withAnswerKeys(version.definition, version.id);
-  const stages = body.stages;
-  if (
-    !Array.isArray(stages) ||
-    stages.length !== version.definition.steps.length
-  )
-    throw new AppError("VALIDATION_ERROR");
   const config = {
     instructions: text(body.instructions, "instructions", 4000, true),
     className: "",
-    stages: stages.map((s, i) => {
-      if (!s || typeof s !== "object" || Array.isArray(s))
-        throw new AppError("VALIDATION_ERROR");
-      fields(s, [
-        "instruction",
-        "hint",
-        "question",
-        "options",
-        "answer",
-        "explanation",
-      ]);
-      const base = privateExp.steps[i];
-      let options: string[] = [],
-        question = "",
-        answer: number | undefined;
-      if (base.question) {
-        if (
-          !Array.isArray(s.options) ||
-          s.options.length < 2 ||
-          s.options.length > 6
-        )
-          throw new AppError("VALIDATION_ERROR");
-        options = s.options.map((o: unknown) => text(o, "option", 300));
-        question = text(s.question, "question", 500);
-        answer = integer(
-          s.answer ?? base.question.answer,
-          "answer",
-          0,
-          options.length - 1,
-        );
-      }
-      return {
-        instruction: text(s.instruction, "instruction", 1000),
-        hint: text(s.hint, "hint", 1000, true),
-        question,
-        options,
-        ...(answer !== undefined
-          ? {
-              answer,
-              explanation: text(
-                s.explanation ?? base.question?.explanation ?? "",
-                "explanation",
-                4000,
-                true,
-              ),
-            }
-          : {}),
-      };
-    }),
+    stages: validateStages(body.stages, privateExp),
   };
   let dueAt: string | null = null;
   if (body.dueAt) {
@@ -317,15 +263,13 @@ export async function publishAssignment(request: Request, id: string) {
       throw new AppError("REVISION_CONFLICT");
     return existing;
   }
-  const version = await experimentVersion(row.experiment_id),
-    definition = await withAnswerKeys(version.definition, version.id),
-    config = row.draft_config as unknown as AssignmentDTO;
+  const config = row.draft_config as unknown as AssignmentDTO;
   const keys: Record<string, unknown> = {};
   config.stages.forEach((s, i) => {
-    if (definition.steps[i].question)
+    if (s.question)
       keys[i] = {
         answer: s.answer,
-        explanation: s.explanation || definition.steps[i].question!.explanation,
+        explanation: s.explanation || "",
       };
   });
   const publicConfig = {

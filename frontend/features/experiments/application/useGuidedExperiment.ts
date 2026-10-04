@@ -1,5 +1,6 @@
 "use client";
 
+import { assignmentExperiment } from "@engine/assignment";
 import type { Assignment } from "@/features/assignments/model";
 import { useEffect, useState, useRef } from "react";
 import type {
@@ -52,6 +53,7 @@ export function useGuidedExperiment(
     body: Record<string, unknown>;
   } | null>(null);
   const pendingKey = `labora-pending-v1:${accountId}:${exp.id}:${assignment?.id || "practice"}`;
+  const runtimeKey = assignment ? `${exp.id}:${assignment.id}` : exp.id;
   useEffect(() => {
     let active = true;
     setHydrated(false);
@@ -59,7 +61,7 @@ export function useGuidedExperiment(
     session.current = null;
     pendingEvent.current = null;
     if (!accountId) {
-      setState(runtimes.load(exp.id) || initialRuntime());
+      setState(runtimes.load(runtimeKey) || initialRuntime());
       setHydrated(true);
       return;
     }
@@ -126,10 +128,18 @@ export function useGuidedExperiment(
     return () => {
       active = false;
     };
-  }, [exp.id, runtimes, accountId, assignment?.id, pendingKey, loadAttempt]);
+  }, [
+    exp.id,
+    runtimes,
+    accountId,
+    assignment?.id,
+    pendingKey,
+    runtimeKey,
+    loadAttempt,
+  ]);
   useEffect(() => {
-    if (hydrated && !accountId) runtimes.save(exp.id, state);
-  }, [state, exp.id, hydrated, runtimes, accountId]);
+    if (hydrated && !accountId) runtimes.save(runtimeKey, state);
+  }, [state, runtimeKey, hydrated, runtimes, accountId]);
 
   async function remote(
     kind: "actions" | "answers",
@@ -209,7 +219,9 @@ export function useGuidedExperiment(
     }
   }
 
-  const activeExperiment = session.current?.definition || exp;
+  const activeExperiment =
+    session.current?.definition ||
+    (assignment ? assignmentExperiment(exp, assignment) : exp);
   const base = activeExperiment.steps[state.step];
   const stage = assignment?.stages[state.step];
   const current =
@@ -306,8 +318,8 @@ export function useGuidedExperiment(
     setState((s) =>
       answer(
         {
-          ...exp,
-          steps: exp.steps.map((step, i) =>
+          ...activeExperiment,
+          steps: activeExperiment.steps.map((step, i) =>
             i === s.step && current ? current : step,
           ),
         },
@@ -357,7 +369,7 @@ export function useGuidedExperiment(
     } else setState(initialRuntime());
     setSelected(null);
     setHint(false);
-    runtimes.clear(exp.id);
+    runtimes.clear(runtimeKey);
     setFeedbackError(false);
     setInteraction(0);
   }

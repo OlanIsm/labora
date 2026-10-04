@@ -1,4 +1,5 @@
 import "server-only";
+import { assignmentExperiment } from "../../../shared/experiment-engine/assignment";
 import type { Experiment } from "@contracts/experiment";
 import type {
   SessionDTO,
@@ -61,23 +62,7 @@ export async function sessionDefinition(
   databaseError(error);
   if (!data) throw new AppError("NOT_FOUND");
   const config = data.config as unknown as AssignmentDTO;
-  return {
-    ...version.definition,
-    steps: version.definition.steps.map((s, i) => ({
-      ...s,
-      instruction: config.stages[i].instruction,
-      hint: config.stages[i].hint,
-      ...(s.question
-        ? {
-            question: {
-              ...s.question,
-              prompt: config.stages[i].question,
-              options: config.stages[i].options,
-            },
-          }
-        : {}),
-    })),
-  };
+  return assignmentExperiment(version.definition, config);
 }
 export async function sessionDTO(
   value:
@@ -303,8 +288,11 @@ export async function sessionEvent(
       const action = text(body.action, "action", 30),
         item = text(body.item, "item", 80);
       if (
-        !exp.items.some((i) => i.id === item) ||
+        (action === "continue"
+          ? step.action !== "continue" || item !== "instruction"
+          : !exp.items.some((i) => i.id === item)) ||
         ![
+          "continue",
           "place",
           "pour",
           "add",

@@ -34,6 +34,7 @@ import { resolveRouteContext } from "./routeContext";
 import { applicationServices } from "./services";
 import { useApplicationState } from "./useApplicationState";
 import { AccountContext } from "@/shared/accountContext";
+import { assignmentExperiment } from "@engine/assignment";
 
 export default function App() {
   const pathname = usePathname() || "/";
@@ -188,7 +189,13 @@ export default function App() {
         runtimes={applicationServices.runtimes}
         accountId={user?.mode === "account" ? user.id : undefined}
         onComplete={async (runtime, result) => {
-          await complete(exp, runtime, result);
+          await complete(
+            assignment ? assignmentExperiment(exp, assignment) : exp,
+            runtime,
+            result,
+          );
+          if (assignment)
+            applicationServices.runtimes.clear(`${exp.id}:${assignment.id}`);
           router.push(resultPath(exp.id));
         }}
       />

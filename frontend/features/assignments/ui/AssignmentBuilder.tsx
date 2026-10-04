@@ -3,7 +3,8 @@
 import type { Assignment } from "@/features/assignments/model";
 import { experiments, getExperiment } from "@/features/experiments/index";
 import { SubjectBadge } from "@/shared/ui/SubjectBadge";
-import { ArrowLeft } from "lucide-react";
+import { StageEditor } from "./StageEditor";
+import { ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,16 +36,24 @@ export function Builder({
   const [templateReady, setTemplateReady] = useState(!account);
   const [savedDraft, setSavedDraft] = useState<Assignment | null>(null);
   const exp = getExperiment(experimentId)!;
-  useEffect(() => {
-    setStages(
-      exp.steps.map((s) => ({
-        instruction: s.instruction,
-        hint: s.hint,
-        question: s.question?.prompt || "",
-        options: s.question?.options || [],
-        answer: s.question?.answer || 0,
-      })),
+  function templateStages(definition: typeof exp): Assignment["stages"] {
+    return definition.steps.flatMap((step, sourceStep) =>
+      step.question
+        ? []
+        : [
+            {
+              kind: "action" as const,
+              sourceStep,
+              instruction: step.instruction,
+              hint: step.hint,
+              question: "",
+              options: [],
+            },
+          ],
     );
+  }
+  useEffect(() => {
+    setStages(templateStages(exp));
   }, [exp]);
   useEffect(() => {
     if (!account) return;
@@ -64,20 +73,12 @@ export function Builder({
   useEffect(() => {
     if (!account) return;
     let active = true;
+    setTemplateReady(false);
     apiFetch<typeof exp>(`/experiments/${exp.id}/authoring`)
       .then((data) => {
         if (!active) return;
         setTemplateReady(true);
-        setStages(
-          data.steps.map((s) => ({
-            instruction: s.instruction,
-            hint: s.hint,
-            question: s.question?.prompt || "",
-            options: s.question?.options || [],
-            answer: s.question?.answer ?? 0,
-            explanation: s.question?.explanation || "",
-          })),
-        );
+        setStages(templateStages(data));
       })
       .catch(() => {
         if (active) setError("Template penilaian belum dapat dimuat.");
@@ -86,12 +87,24 @@ export function Builder({
       active = false;
     };
   }, [account, exp]);
-  function update(
-    i: number,
-    key: "instruction" | "hint" | "question" | "explanation",
-    value: string,
-  ) {
-    setStages((s) => s.map((x, j) => (j === i ? { ...x, [key]: value } : x)));
+  function addStage(kind: "instruction" | "quiz", after = stages.length - 1) {
+    if (stages.length >= 100) {
+      setError("Satu tugas dapat memuat maksimal 100 langkah dan kuis.");
+      return;
+    }
+    const stage: Assignment["stages"][number] = {
+      kind,
+      instruction: kind === "quiz" ? "Jawab pertanyaan berikut." : "",
+      hint: "",
+      question: "",
+      options: kind === "quiz" ? ["", ""] : [],
+      ...(kind === "quiz" ? { answer: 0 } : {}),
+    };
+    setStages((previous) => [
+      ...previous.slice(0, after + 1),
+      stage,
+      ...previous.slice(after + 1),
+    ]);
   }
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -156,8 +169,8 @@ export function Builder({
       <div className="page-heading">
         <h1>Buat tugas eksperimen</h1>
         <p>
-          Tentukan kelas dan arahan. Simulasi serta jawaban ilmiahnya tetap
-          tersedia.
+          Susun langkah sesuai kebutuhan kelas. Tambahkan kuis jika ingin
+          menilai pemahaman siswa.
         </p>
       </div>
       <form className="builder-layout" onSubmit={save}>
@@ -235,107 +248,49 @@ export function Builder({
             </label>
           </section>
           <section className="builder-section">
-            <h2>Panduan tiap langkah</h2>
+            <h2>Langkah dan kuis</h2>
             <p>
-              Ubah instruksi dan petunjuk. Tindakan dan kuis tetap mengikuti
-              simulasi.
+              Mulai dari langkah simulasi yang tersedia. Tambahkan bacaan,
+              pengamatan, atau kuis; kuis tidak wajib.
             </p>
-            {stages.map((s, i) => (
-              <div className="builder-stage" key={i}>
-                <span className="builder-stage-num">{i + 1}</span>
-                <div>
-                  <h3>Langkah {i + 1}</h3>
-                  <label>
-                    Instruksi
-                    <input
-                      value={s.instruction}
-                      onChange={(e) => update(i, "instruction", e.target.value)}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Petunjuk
-                    <input
-                      value={s.hint}
-                      onChange={(e) => update(i, "hint", e.target.value)}
-                    />
-                  </label>
-                  {exp.steps[i]?.question && (
-                    <div className="stage-question">
-                      <label>
-                        Penjelasan setelah menjawab
-                        <textarea
-                          maxLength={4000}
-                          value={s.explanation || ""}
-                          onChange={(e) =>
-                            update(i, "explanation", e.target.value)
-                          }
-                        />
-                      </label>
-                      <label>
-                        Pertanyaan
-                        <input
-                          required
-                          maxLength={500}
-                          value={s.question}
-                          onChange={(e) =>
-                            update(i, "question", e.target.value)
-                          }
-                        />
-                      </label>
-                      {s.options.map((option, optionIndex) => (
-                        <label key={optionIndex}>
-                          Pilihan {optionIndex + 1}
-                          <input
-                            required
-                            maxLength={300}
-                            value={option}
-                            onChange={(e) =>
-                              setStages((previous) =>
-                                previous.map((stage, stageIndex) =>
-                                  stageIndex === i
-                                    ? {
-                                        ...stage,
-                                        options: stage.options.map(
-                                          (value, index) =>
-                                            index === optionIndex
-                                              ? e.target.value
-                                              : value,
-                                        ),
-                                      }
-                                    : stage,
-                                ),
-                              )
-                            }
-                          />
-                        </label>
-                      ))}
-                      <label>
-                        Jawaban benar
-                        <select
-                          value={s.answer}
-                          onChange={(e) =>
-                            setStages((previous) =>
-                              previous.map((stage, index) =>
-                                index === i
-                                  ? { ...stage, answer: Number(e.target.value) }
-                                  : stage,
-                              ),
-                            )
-                          }
-                        >
-                          {s.options.map((option, index) => (
-                            <option key={index} value={index}>
-                              {option || `Pilihan ${index + 1}`}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
+            {stages.map((stage, index) => (
+              <StageEditor
+                key={index}
+                stage={stage}
+                index={index}
+                experiment={exp}
+                onChange={(updated) =>
+                  setStages((previous) =>
+                    previous.map((value, i) => (i === index ? updated : value)),
+                  )
+                }
+                onRemove={
+                  stages.length > 1
+                    ? () =>
+                        setStages((previous) =>
+                          previous.filter((_, i) => i !== index),
+                        )
+                    : undefined
+                }
+                onAddQuiz={() => addStage("quiz", index)}
+              />
             ))}
+            <div className="builder-add-actions">
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => addStage("instruction")}
+              >
+                <Plus size={18} /> Tambah langkah
+              </button>
+              <button
+                type="button"
+                className="button ghost"
+                onClick={() => addStage("quiz")}
+              >
+                <Plus size={18} /> Tambah kuis
+              </button>
+            </div>
           </section>
         </div>
         <aside className="builder-aside">
@@ -343,8 +298,10 @@ export function Builder({
           <h2>{exp.title}</h2>
           <p>{exp.objective}</p>
           <div className="inline-meta">
-            <span>{exp.steps.length} langkah</span>
-            <span>{exp.duration} menit</span>
+            <span>
+              {stages.filter((s) => s.kind !== "quiz").length} langkah
+            </span>
+            <span>{stages.filter((s) => s.kind === "quiz").length} kuis</span>
           </div>
           {error && (
             <p className="form-error" role="alert">

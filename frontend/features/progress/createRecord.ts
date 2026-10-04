@@ -9,6 +9,7 @@ export function createRecord(
   user: User | null,
 ): RecordEntry {
   return {
+    definition: experiment,
     experimentId: experiment.id,
     completedAt: new Date().toISOString(),
     score: score(experiment, runtime).total,

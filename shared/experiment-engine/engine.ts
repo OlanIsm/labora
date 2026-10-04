@@ -72,6 +72,18 @@ export function act(
 ): Runtime {
   const step = exp.steps[state.step];
   if (!step) return state;
+  if (
+    step.action === "continue" &&
+    action === "continue" &&
+    item === "instruction"
+  )
+    return {
+      ...state,
+      step: state.step + 1,
+      done: [...state.done, state.step],
+      feedback:
+        exp.steps[state.step + 1]?.instruction || "Semua langkah selesai.",
+    };
   if (exp.subject === "chemistry") {
     if (step.action !== action || step.item !== item)
       return {

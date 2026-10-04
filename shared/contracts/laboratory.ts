@@ -19,6 +19,8 @@ export type AssignmentDTO = {
   audience?: "class" | "students";
   selectedStudentCount?: number;
   stages: {
+    kind?: "action" | "instruction" | "quiz";
+    sourceStep?: number;
     instruction: string;
     hint: string;
     question: string;

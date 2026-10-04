@@ -43,7 +43,7 @@ export function Workspace({
         {interaction > 0 &&
           !dropError &&
           state.step > 0 &&
-          !exp.steps[state.step - 1]?.question && (
+          !!exp.steps[state.step - 1]?.item && (
             <span
               className={`lab-tool-motion action-${exp.steps[state.step - 1]?.action}`}
               aria-hidden="true"

@@ -27,8 +27,19 @@ export function ChemistryVisual({
     id: "vessel",
     disabled: !active,
   });
-  const ready = preview || state.step >= 3;
-  const filled = preview || state.step >= 2;
+  const completed = exp.steps.slice(0, state.step);
+  const ready =
+    preview ||
+    completed.some(
+      (step) =>
+        step.item ===
+          (exp.visual === "ph"
+            ? "indicator"
+            : exp.visual === "mixture"
+              ? "reagent"
+              : "water") && step.action !== "place",
+    );
+  const filled = preview || completed.some((step) => step.action === "pour");
   const visible =
     preview ||
     state.placed.includes(exp.visual === "dilution" ? "cylinder" : "beaker");
@@ -491,7 +502,13 @@ export function Visual({
       <div className="visual pendulum-visual">
         <div className="pendulum-frame">
           <div
-            className={state.step >= 3 && !preview ? "pendulum-swing" : ""}
+            className={
+              exp.steps
+                .slice(0, state.step)
+                .some((step) => step.action === "activate") && !preview
+                ? "pendulum-swing"
+                : ""
+            }
             style={{ animationDuration: `${pendulumPeriod(state.length)}s` }}
           >
             <div className="pendulum-string" />
