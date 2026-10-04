@@ -24,6 +24,25 @@ export function ExperimentCard({
       className={`experiment-card ${exp.subject}`}
     >
       <div className={`experiment-art ${exp.subject}`}>
+        {fromChallenges && (
+          <svg
+            className="challenge-card-accents"
+            viewBox="0 0 400 190"
+            aria-hidden="true"
+          >
+            <path
+              d="m105 40 10 14m173-5-12 18m23-3-17 9"
+              stroke="currentColor"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M110 76q0 15-15 15 15 0 15 15 0-15 15-15-15 0-15-15Z"
+              fill="#fff0a6"
+            />
+            <circle cx="310" cy="140" r="9" fill="currentColor" opacity=".3" />
+          </svg>
+        )}
         <Visual exp={exp} state={initialRuntime()} preview />
         <span className="preview-label">Pratinjau simulasi</span>
         {record && (

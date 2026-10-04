@@ -24,7 +24,8 @@ import { Progress, Result, AccountResult } from "@/features/progress/ui";
 import { SettingsPage } from "@/features/settings/ui";
 import { resultPath } from "@/shared/routes";
 import { EmptyState } from "@/shared/ui/EmptyState";
-import { FlaskConical, X } from "lucide-react";
+import { ArrowLeft, FlaskConical, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
@@ -113,28 +114,55 @@ export default function App() {
     );
   } else if (pathname === "/challenges")
     content = (
-      <>
-        <div className="page-heading">
-          <h1>Tantangan</h1>
-          <p>
-            Aktivitas lama dan tugas kelas tetap tersedia di sini, termasuk
-            hasil dan skor lama. Eksperimen bebas tidak memerlukan langkah atau
-            kuis.
-          </p>
-          <Link href="/sandbox/chemistry" className="button primary">
-            Kembali ke eksperimen bebas
-          </Link>
-        </div>
+      <div className="challenges-page">
+        <section className="challenges-banner chemistry">
+          <div className="challenges-banner-copy">
+            <h1>Tantangan</h1>
+            <p>
+              Aktivitas lama dan tugas kelas tetap tersedia di sini, termasuk
+              hasil dan skor lama. Eksperimen bebas tidak memerlukan langkah
+              atau kuis.
+            </p>
+            <Link href="/sandbox/chemistry" className="button primary">
+              <ArrowLeft size={22} /> Kembali ke eksperimen bebas
+            </Link>
+          </div>
+          <Image
+            src="/challenge-flask.svg"
+            width={320}
+            height={270}
+            alt=""
+            className="challenges-banner-art"
+            priority
+          />
+        </section>
         <div className="experiment-grid">
-          {experiments.map((e) => (
-            <ExperimentCard
-              key={e.id}
-              exp={e}
-              record={records.find((r) => r.experimentId === e.id)}
-            />
-          ))}
+          {[...experiments]
+            .sort((a, b) => {
+              const order = [
+                "acid-base",
+                "blood-cells",
+                "dilution",
+                "microscope",
+                "mixture",
+                "ohms-law",
+                "projectile",
+                "pendulum",
+                "transpiration",
+              ];
+              const rank = (id: string) =>
+                order.includes(id) ? order.indexOf(id) : order.length;
+              return rank(a.id) - rank(b.id);
+            })
+            .map((e) => (
+              <ExperimentCard
+                key={e.id}
+                exp={e}
+                record={records.find((r) => r.experimentId === e.id)}
+              />
+            ))}
         </div>
-      </>
+      </div>
     );
   else if (pathname === "/laboratories" || pathname === "/experiments")
     content = (
@@ -235,6 +263,7 @@ export default function App() {
         onLogout={logout}
         wide={
           segments[0] === "lab" ||
+          pathname === "/challenges" ||
           (segments[0] === "challenges" && segments[1] === "run") ||
           isSandbox ||
           !!physicsSimulation

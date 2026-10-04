@@ -946,6 +946,128 @@ small {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
+.challenges-banner {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  align-items: center;
+  min-height: 230px;
+  padding: 28px 40px;
+  margin-bottom: 20px;
+  border-radius: 28px;
+  background: #c9edff url("/abstract-lab.svg") center / cover;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgb(21 92 123 / 7%);
+}
+.challenges-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 45%;
+  background: var(--blue) url("/abstract-lab.svg") center / cover;
+  border-radius: 70% 0 0 20%;
+  opacity: 0.55;
+}
+.challenges-banner-copy {
+  position: relative;
+  z-index: 1;
+}
+.challenges-banner h1 {
+  font-size: clamp(2.75rem, 4vw, 3.75rem);
+  font-weight: 600;
+}
+.challenges-banner p {
+  max-width: 62ch;
+  margin: 10px 0 18px;
+  font-size: 1.0625rem;
+}
+.challenges-banner .button {
+  background: #5ec8ff;
+  color: #083f62;
+  box-shadow: 0 5px 12px rgb(21 92 123 / 16%);
+}
+.challenges-banner-art {
+  position: absolute;
+  right: 9%;
+  height: 235px;
+  width: 280px;
+  object-fit: contain;
+}
+.challenges-page .experiment-grid {
+  gap: 16px;
+}
+.challenges-page .experiment-card {
+  overflow: hidden;
+  border-color: #e6f0f9;
+  box-shadow: 0 5px 18px rgb(21 92 123 / 6%);
+}
+.challenges-page .experiment-art {
+  height: 190px;
+  background: color-mix(in srgb, var(--subject-solid) 40%, white)
+    url("/abstract-lab.svg") center / cover;
+}
+.challenge-card-accents {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  color: var(--subject-solid);
+  pointer-events: none;
+}
+.challenges-page .experiment-art .visual {
+  padding: 14px 28px 20px;
+}
+.challenges-page .experiment-art::before {
+  content: "";
+  position: absolute;
+  width: 180px;
+  height: 170px;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%) rotate(-15deg);
+  border-radius: 40% 50% 35% 55%;
+  background: rgb(255 255 255 / 25%);
+}
+.challenges-page .experiment-art .science-beaker {
+  width: 116px;
+  height: 146px;
+  border-color: var(--subject-ink);
+  box-shadow: 0 5px 0 rgb(21 92 123 / 12%);
+}
+.challenges-page .science-beaker::after {
+  background: var(--subject-ink);
+}
+.challenges-page .science-beaker::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  bottom: 18px;
+  left: 9px;
+  width: 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 65%);
+  z-index: 1;
+}
+.challenges-page .microscope-field {
+  width: 156px;
+  height: 156px;
+}
+.challenges-page .preview-label {
+  left: 12px;
+  bottom: 10px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 78%);
+}
+.challenges-page .experiment-card-copy {
+  padding: 18px 22px 20px;
+}
+.challenges-page .experiment-card h3 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  margin-top: 14px;
+}
+.challenges-page .experiment-card p {
+  margin: 8px 0 18px;
+}
 .experiment-card {
   display: flex;
   flex-direction: column;
@@ -2745,6 +2867,32 @@ form textarea {
 }
 
 @media (max-width: 650px) {
+  .challenges-banner {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+  .challenges-banner-copy {
+    order: 1;
+  }
+  .challenges-banner-art {
+    position: relative;
+    right: auto;
+    justify-self: center;
+    width: 200px;
+    height: 170px;
+  }
+  .challenges-banner::before {
+    inset: 0 0 40%;
+    border-radius: 0 0 50% 40%;
+  }
+  .challenges-banner .button {
+    width: 100%;
+    padding-inline: 12px;
+    font-size: 0.875rem;
+  }
+  .challenges-banner p {
+    font-size: 0.9375rem;
+  }
   body {
     font-size: 1rem;
   }
