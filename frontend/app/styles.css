@@ -834,6 +834,24 @@ small {
 .dashboard-lower .section-heading h2 {
   font-size: 1.375rem;
 }
+.dashboard-lower > section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dashboard-lower .section-heading {
+  min-height: 44px;
+}
+.dashboard-lower .empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.challenge-subject {
+  margin-top: 32px;
+}
 .list-row,
 .assignment-row,
 .history-row {
@@ -1541,6 +1559,8 @@ summary > span {
 .microscope-field {
   width: 205px;
   height: 205px;
+  flex: none;
+  aspect-ratio: 1;
   border: 8px solid #557643;
   border-radius: 50%;
   background: #dff0d5;
@@ -1548,14 +1568,54 @@ summary > span {
   overflow: hidden;
 }
 .cell-pattern {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
   position: absolute;
-  inset: -8px;
-  align-content: center;
+  inset: 0;
   transition: transform 0.3s ease-out;
-  filter: blur(5px);
+}
+.cell-pattern > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.microscope-field:not(.focused) .cell-pattern {
+  visibility: hidden;
+}
+.microscope-field.blood {
+  background: #fff3f4;
+}
+.workspace .visual.biology-visual,
+.workspace .visual.plant-visual {
+  height: auto;
+  min-height: 340px;
+}
+.biology-key {
+  max-width: 48ch;
+}
+.workspace .visual.projectile-visual {
+  height: auto;
+  min-height: 340px;
+}
+.projectile-visual > svg {
+  flex: none;
+  aspect-ratio: 580 / 300;
+}
+.projectile-axis-label {
+  font:
+    14px "Nunito Sans",
+    sans-serif;
+  fill: var(--physics-ink);
+}
+.projectile-replay {
+  width: 100%;
+}
+.transpiration-diagram {
+  width: min(100%, 320px);
+  height: 210px;
+  flex: none;
+}
+.experiment-art .transpiration-diagram,
+.next-preview .transpiration-diagram {
+  height: 150px;
 }
 .focused .cell-pattern {
   filter: none;
@@ -1735,11 +1795,6 @@ summary > span {
 }
 .scene-action .plant-bag i {
   animation: water-appear 0.7s ease-out both;
-}
-.scene-action .projectile-visual circle:last-child {
-  animation: ball-arrive 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-box: fill-box;
-  transform-origin: center;
 }
 .scene-retry .visual {
   animation: try-again 0.28s ease-out;
@@ -3353,17 +3408,33 @@ form textarea {
 }
 .app-sidebar {
   overflow: hidden;
-  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-inline: 12px;
+  transition:
+    width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease;
+}
+.sidebar-brand .logo {
+  margin-left: 8px;
+  width: 200px;
+}
+.sidebar-brand .logo-wordmark {
+  transition: opacity 0.18s ease;
+}
+.sidebar-collapsed .sidebar-brand .logo-wordmark {
+  opacity: 0;
+}
+.app-sidebar nav a {
+  padding-inline: 21px;
+  width: 100%;
 }
 .app-sidebar nav a span {
   white-space: nowrap;
-  transition: opacity 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.28s ease;
 }
 .app-sidebar nav a svg {
   flex-shrink: 0;
-}
-.app-sidebar nav a:last-child {
-  margin-top: 16px;
 }
 .sidebar-collapsed .app-sidebar {
   width: 88px;
@@ -3372,37 +3443,9 @@ form textarea {
 .sidebar-collapsed .app-frame {
   margin-left: 88px;
 }
-.sidebar-collapsed .sidebar-brand {
-  padding: 0;
-}
-.sidebar-collapsed .sidebar-brand .logo {
-  font-size: 0;
-  gap: 0;
-  margin-left: 10px;
-}
-.sidebar-collapsed .sidebar-brand .logo-dot {
-  display: none;
-}
-.sidebar-collapsed .app-sidebar nav {
-  margin-top: 44px;
-}
-.sidebar-collapsed .app-sidebar nav a {
-  justify-content: center;
-  padding-inline: 0;
-}
 .sidebar-collapsed .app-sidebar nav a span {
-  width: 0;
   opacity: 0;
-  overflow: hidden;
-}
-.sidebar-collapsed .app-sidebar nav a {
-  gap: 0;
-}
-.sidebar-collapsed .sidebar-profile > span:nth-child(2) {
-  display: none;
-}
-.sidebar-collapsed .sidebar-profile {
-  justify-content: center;
+  transform: translateX(-8px);
 }
 .settings-page {
   max-width: 920px;

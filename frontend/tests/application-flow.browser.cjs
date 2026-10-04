@@ -10,6 +10,20 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    // Local UI coverage does not require a configured school database.
+    await page.route("**/api/v1/practice/answers", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          requestId: "ui-test",
+          data: {
+            correct: true,
+            explanation:
+              "Molekul indikator merespons konsentrasi ion hidrogen.",
+          },
+        }),
+      }),
+    );
     await page.goto(baseUrl, { timeout: 60000 });
     await page
       .getByRole("link", { name: /Mulai eksperimen/i })
@@ -20,6 +34,29 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     await page.getByRole("button", { name: "Coba sebagai siswa" }).click();
     await page.waitForURL("**/dashboard");
     await page.goto(`${baseUrl}/challenges`);
+    await page.locator(".challenge-subject h2").first().waitFor();
+    assert.deepEqual(
+      await page.locator(".challenge-subject h2").allTextContents(),
+      ["Kimia", "Fisika", "Biologi"],
+    );
+    for (const [index, subject] of [
+      "chemistry",
+      "physics",
+      "biology",
+    ].entries()) {
+      const cards = page
+        .locator(".challenge-subject")
+        .nth(index)
+        .locator(".experiment-card");
+      assert.ok(await cards.count());
+      assert.ok(
+        await cards.evaluateAll(
+          (nodes, subject) =>
+            nodes.every((node) => node.classList.contains(subject)),
+          subject,
+        ),
+      );
+    }
     await page
       .locator('.experiment-card[href^="/experiments/acid-base"]')
       .click();
@@ -54,6 +91,12 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
         name: /Molekul indikator merespons konsentrasi ion hidrogen/,
       })
       .click();
+    await page
+      .getByRole("button", { name: "Lihat hasil eksperimen" })
+      .waitFor({ timeout: 10000 })
+      .catch(async () => {
+        throw new Error(await page.locator(".feedback-line").innerText());
+      });
     await page.getByRole("button", { name: "Lihat hasil eksperimen" }).click();
     await page.waitForURL("**/results/acid-base");
     await page
@@ -100,6 +143,43 @@ const baseUrl = process.env.LABORA_BASE_URL || "http://localhost:3000";
     await page.goto(`${baseUrl}/fisika/meriam-target`);
     await page.getByRole("button", { name: "Tembak!", exact: true }).click();
     assert.ok(await page.locator("canvas").count());
+
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 1000 });
+      for (const route of [
+        "/dashboard",
+        "/challenges",
+        "/challenges/run/acid-base",
+      ]) {
+        await page.goto(`${baseUrl}${route}`);
+        await page.locator(".loading-page").waitFor({ state: "hidden" });
+        if (route.includes("/run/")) {
+          await page
+            .getByRole("button", { name: "Letakkan gelas beker", exact: true })
+            .waitFor();
+        } else {
+          await page
+            .getByRole("heading", {
+              name: route === "/dashboard" ? /Mau coba apa hari/ : "Tantangan",
+              exact: true,
+            })
+            .waitFor();
+        }
+        assert.ok(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+          `${route} fits at ${width}px`,
+        );
+        if (process.env.LABORA_SCREENSHOTS) {
+          await page.screenshot({
+            path: `${process.env.LABORA_SCREENSHOTS}/${width}-${route.replaceAll("/", "-")}.png`,
+            fullPage: true,
+          });
+        }
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.goto(`${baseUrl}/login`);
     await page.getByRole("button", { name: "Coba sebagai guru" }).click();

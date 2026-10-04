@@ -11,7 +11,6 @@ import {
   FlaskConical,
   GraduationCap,
   Home,
-  Settings,
   Target,
 } from "lucide-react";
 import Link from "next/link";
@@ -71,10 +70,10 @@ export function Shell({
     ...(user?.role === "teacher"
       ? [{ href: "/teacher", label: "Ruang guru", icon: GraduationCap }]
       : []),
-    { href: "/settings", label: "Settings", icon: Settings },
   ];
   const active = (href: string) =>
     pathname === href ||
+    (href === "/challenges" && pathname.startsWith("/challenges/")) ||
     (href === "/laboratories" &&
       (pathname === "/kimia" ||
         pathname === "/sandbox/chemistry" ||
@@ -162,22 +161,6 @@ export function Shell({
             </Link>
           ))}
         </nav>
-        <Link
-          href="/settings"
-          prefetch={true}
-          className="sidebar-profile"
-          aria-label="Buka pengaturan akun"
-          title="Pengaturan akun"
-          onClick={keepSidebarOpen}
-        >
-          <span className="avatar">
-            {(user?.name || "T").charAt(0).toUpperCase()}
-          </span>
-          <span>
-            <strong>{user?.name || "Tamu"}</strong>
-            <small>{user?.role === "teacher" ? "Guru" : "Siswa"}</small>
-          </span>
-        </Link>
       </aside>
       <div className="app-frame" onClickCapture={closeSidebar}>
         <AppHeader

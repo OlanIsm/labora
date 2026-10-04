@@ -22,6 +22,7 @@ import {
 import { Landing } from "@/features/marketing/ui";
 import { Progress, Result, AccountResult } from "@/features/progress/ui";
 import { SettingsPage } from "@/features/settings/ui";
+import { subjects } from "@/shared/subjects";
 import { resultPath } from "@/shared/routes";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ArrowLeft, FlaskConical, X } from "lucide-react";
@@ -136,32 +137,24 @@ export default function App() {
             priority
           />
         </section>
-        <div className="experiment-grid">
-          {[...experiments]
-            .sort((a, b) => {
-              const order = [
-                "acid-base",
-                "blood-cells",
-                "dilution",
-                "microscope",
-                "mixture",
-                "ohms-law",
-                "projectile",
-                "pendulum",
-                "transpiration",
-              ];
-              const rank = (id: string) =>
-                order.includes(id) ? order.indexOf(id) : order.length;
-              return rank(a.id) - rank(b.id);
-            })
-            .map((e) => (
-              <ExperimentCard
-                key={e.id}
-                exp={e}
-                record={records.find((r) => r.experimentId === e.id)}
-              />
-            ))}
-        </div>
+        {subjects.map((subject) => (
+          <section className="challenge-subject" key={subject.id}>
+            <div className="section-heading">
+              <h2>{subject.name}</h2>
+            </div>
+            <div className="experiment-grid">
+              {experiments
+                .filter((e) => e.subject === subject.id)
+                .map((e) => (
+                  <ExperimentCard
+                    key={e.id}
+                    exp={e}
+                    record={records.find((r) => r.experimentId === e.id)}
+                  />
+                ))}
+            </div>
+          </section>
+        ))}
       </div>
     );
   else if (pathname === "/laboratories" || pathname === "/experiments")

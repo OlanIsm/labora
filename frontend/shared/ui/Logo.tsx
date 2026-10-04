@@ -9,7 +9,9 @@ export function Logo({ href = "/" }: { href?: string }) {
       <span className="logo-mark">
         <Image src="/logo/logo.png" alt="" width={48} height={48} priority />
       </span>
-      labora<span className="logo-dot">.</span>
+      <span className="logo-wordmark">
+        labora<span className="logo-dot">.</span>
+      </span>
     </Link>
   );
 }

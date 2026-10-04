@@ -94,7 +94,8 @@ export function Lab({
     setDragging(null);
     const item = String(e.active.id);
     if (exp.subject !== "chemistry") {
-      if (e.over?.id === "workspace") doAction("place", item);
+      if (e.over?.id === "workspace")
+        doAction(current?.item === item ? current.action : "place", item);
       return;
     }
     const target = current?.action === "place" ? "workspace" : "vessel";
@@ -173,7 +174,7 @@ export function Lab({
       <div className="lab-shell">
         <div className="lab-bar">
           <Link
-            href={path(exp.id)}
+            href={`${path(exp.id)}?from=challenges${assignment ? `&assignment=${assignment.id}` : ""}`}
             className="back-link"
             aria-label="Tentang eksperimen"
           >
@@ -394,6 +395,16 @@ export function Lab({
                   </div>
                 ) : exp.visual === "projectile" ? (
                   <>
+                    {state.launched && (
+                      <div className="projectile-replay">
+                        <button
+                          className="button ghost small"
+                          onClick={() => setInteraction((n) => n + 1)}
+                        >
+                          <RotateCcw size={17} /> Luncurkan lagi
+                        </button>
+                      </div>
+                    )}
                     <label>
                       Sudut peluncuran <strong>{state.angle}°</strong>
                       <input
